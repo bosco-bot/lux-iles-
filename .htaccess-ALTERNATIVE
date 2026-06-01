@@ -1,0 +1,17 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /lux-iles/
+    
+    # Rediriger vers public si on n'est pas déjà dedans
+    RewriteCond %{REQUEST_URI} !^/lux-iles/public/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Si mod_rewrite n'est pas disponible, essayer avec DirectoryIndex
+DirectoryIndex public/index.php index.php
+
+
+
+

@@ -1,0 +1,82 @@
+========================================
+CONFIGURATION SOKETI POUR LUXÎLES
+========================================
+
+✅ Soketi est installé dans le projet !
+
+📋 ÉTAPES POUR ACTIVER LE TEMPS RÉEL :
+
+1. DÉMARRER SOKETI
+   
+   Dans un terminal, exécutez :
+   ```bash
+   cd /home/bosco/Bureau/lux-iles
+   npm run soketi
+   ```
+   
+   Ou directement :
+   ```bash
+   npx soketi start
+   ```
+
+2. CONFIGURER LE FICHIER .env
+   
+   Ajoutez ces lignes dans votre fichier .env :
+   
+   ```
+   BROADCAST_CONNECTION=soketi
+   
+   PUSHER_APP_ID=app-id
+   PUSHER_APP_KEY=app-key
+   PUSHER_APP_SECRET=app-secret
+   PUSHER_HOST=127.0.0.1
+   PUSHER_PORT=6001
+   PUSHER_SCHEME=http
+   
+   VITE_PUSHER_APP_KEY=app-key
+   VITE_PUSHER_HOST=127.0.0.1
+   VITE_PUSHER_PORT=6001
+   VITE_PUSHER_SCHEME=http
+   ```
+
+3. REDÉMARRER LARAVEL
+   
+   Après avoir modifié le .env :
+   ```bash
+   php artisan config:clear
+   php artisan cache:clear
+   ```
+
+4. TESTER
+   
+   - Ouvrir l'application dans le navigateur
+   - Ouvrir la console (F12)
+   - Vous devriez voir les connexions WebSocket se connecter
+   - Tester en créant une réservation → Les admins reçoivent une notification instantanée
+   - Tester en envoyant un message → Le message apparaît instantanément chez le destinataire
+
+========================================
+CONSEIL : Démarrer Soketi dans un terminal séparé
+========================================
+
+Pour le développement, vous aurez besoin de 3 terminaux :
+
+Terminal 1 - Laravel :
+  php artisan serve
+
+Terminal 2 - Soketi :
+  npm run soketi
+
+Terminal 3 - Queue Worker (optionnel) :
+  php artisan queue:work
+
+========================================
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,10 @@
+# Cursor AI – Final Rules
+
+- Always analyze the existing codebase before writing code
+- Never duplicate logic; reuse or refactor instead
+- Follow existing architecture and naming conventions
+- Prefer small, incremental changes
+- Ask before introducing new abstractions
+- Favor readability and maintainability
+- When unsure, propose options instead of guessing
+

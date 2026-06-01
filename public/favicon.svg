@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Fond transparent -->
+  <rect width="64" height="64" fill="none" />
+  <!-- Cercle dans l'esprit du logo-circle -->
+  <circle cx="32" cy="32" r="28" fill="#0A1A2F" />
+  <!-- Lettre L dorée au centre -->
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central"
+        font-family="Playfair Display, Georgia, serif"
+        font-size="34"
+        fill="#CBAE82">
+    L
+  </text>
+</svg>
+

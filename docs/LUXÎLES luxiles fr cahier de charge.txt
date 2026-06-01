@@ -1,0 +1,376 @@
+
+LUXÎLES
+luxiles.fr
+
+
+CAHIER DES CHARGES
+Évolutions de la plateforme de location de villas de luxe aux Caraïbes
+Version 4.0 — FINALE — Bon pour développement
+
+Plateforme
+LUXÎLES — luxiles.fr
+Statut
+✔ VERSION FINALE — Bon pour développement
+Version
+4.0 — Juin 2025 (toutes annotations client intégrées)
+Réalisé par
+Équipe de développement LUXÎLES
+Historique
+v1.0 → v2.0 → v3.0 → v4.0 (version définitive)
+
+  ✔ Document v4.0 — Toutes les décisions et annotations client ont été intégrées.
+  ✔ Aucun point restant en suspens. Le document est prêt pour signature et démarrage des développements.
+  ✔ Toute modification après signature fera l'objet d'un avenant.
+
+1. Contexte du projet
+
+
+LUXÎLES est une plateforme en ligne de location de villas de prestige aux Caraïbes, proposant une sélection exclusive de propriétés à Saint-Martin, en Guadeloupe et à Marie-Galante. La plateforme s'adresse à une clientèle haut de gamme internationale, avec des services premium intégrés : conciergerie dédiée 24/7, chef à domicile, transferts privés et activités exclusives.
+
+Développée et maintenue en interne par l'équipe technique LUXÎLES, la plateforme est accessible à l'adresse luxiles.fr. Ce document est la version 4.0 et définitive du cahier des charges des évolutions souhaitées, intégrant l'ensemble des retours et annotations du client sur les versions précédentes.
+
+2. Objectifs des évolutions
+
+
+Objectif stratégique
+Description
+Fidélisation premium
+Lancer le LUXÎLES PRIVILEGE CLUB (INSIDER / SIGNATURE / LEGEND) avec page dédiée aux membres connectés, avantages exclusifs par palier et maintien de statut conditionné à une réservation annuelle.
+Tarification flexible
+Moduler les prix des villas selon les saisons Caraïbes, avec priorité au tarif le plus élevé en cas de chevauchement.
+Réputation & confiance
+Permettre aux voyageurs de noter et commenter les villas, avec modération préalable par l'équipe et réponse publique possible. Délai de dépôt : 30 jours après séjour.
+Gestion opérationnelle
+Inscrire manuellement un client, téléverser ses contrats (PDF/Word, 15 Mo max) dans son dossier et associer des réservations hors-ligne avec suivi du paiement.
+Pilotage de l'activité
+Tableau de bord de fréquentation intégré directement dans le back-office LUXÎLES.
+
+3. Description des fonctionnalités
+
+
+🏆  3.1  LUXÎLES PRIVILEGE CLUB — Programme de fidélité
+Le programme de fidélité LUXÎLES PRIVILEGE CLUB récompense les voyageurs réguliers via trois niveaux de statut progressifs. Une page dédiée est accessible exclusivement aux membres connectés sur luxiles.fr.
+
+Les trois niveaux du Privilege Club
+Niveau
+Condition d'accès
+Avantages clés
+Maintien du statut
+🌴 INSIDER
+Dès le 1er séjour confirmé
+Accès collection privilège, conciergerie personnalisée, offres exclusives
+Réserver au moins 1 fois par an
+⭐ SIGNATURE
+3 séjours confirmés sur 3 ans glissants
+Early check-in / late check-out, cadeau bienvenue premium, priorité réservation
+Réserver au moins 1 fois par an
+💎 LEGEND
+7 séjours confirmés sur 3 ans glissants
+Surclassement villa, transfert aéroport offert, concierge dédié, accès villas exclusives
+Réserver au moins 1 fois par an
+
+Règles de gestion
+    • Seuls les séjours confirmés et réalisés sont comptabilisés. Les annulations ne comptent pas.
+    • La logique est glissante sur les 3 dernières années.
+    • Pour maintenir son statut, le voyageur doit effectuer au minimum une réservation par an. Faute de quoi, son statut est rétrogradé au niveau inférieur automatiquement au 1er janvier.
+    • Le changement de niveau (montée ou rétrogradation) est automatique.
+    • Le statut est visible dans l'espace client du voyageur et modifiable manuellement par l'administrateur.
+
+Page LUXÎLES PRIVILEGE CLUB
+    • La page est protégée — elle est uniquement accessible aux voyageurs connectés à leur espace client. Elle est invisible pour tout visiteur non connecté.
+    • Un voyageur déjà connecté y accède directement, sans étape de reconnexion supplémentaire.
+    • Elle présente les 3 niveaux, leurs avantages détaillés et le statut actuel du membre connecté.
+
+Notifications
+    • Email personnalisé de félicitations lors de tout changement de niveau.
+    • Message WhatsApp de l'équipe LUXÎLES.
+    • Notification visible dans l'espace client du voyageur.
+
+  ✔ VALIDÉ — Rétrogradation : le client doit réserver au moins 1 fois par an pour maintenir son statut.
+  ✔ VALIDÉ — Page Privilege Club : accessible aux membres connectés, sans reconnexion requise.
+  ✔ VALIDÉ — Notifications : email + WhatsApp + espace client.
+
+💸  3.2  Gestion des réductions commerciales
+L'équipe LUXÎLES peut accorder des codes promotionnels à certains clients. Ces réductions ne sont pas appliquées automatiquement lors de la réservation : leur attribution reste manuelle et ciblée.
+
+Règles de gestion
+    • Les codes promotionnels sont créés et gérés directement depuis le back-office LUXÎLES.
+    • Aucune réduction n'est calculée ou appliquée automatiquement lors d'une réservation.
+    • Le code promotionnel est envoyé au client par l'équipe, puis saisi par le voyageur lors de sa réservation.
+    • La réduction accordée est visible par le voyageur dans son espace client personnel.
+    • Les niveaux SIGNATURE et LEGEND n'ouvrent pas automatiquement droit à une remise systématique.
+
+  ✔ VALIDÉ — Codes promotionnels créés et gérés depuis le back-office LUXÎLES.
+  ✔ VALIDÉ — Réduction visible dans l'espace client du voyageur.
+
+📅  3.3  Gestion des saisons et des tarifs des villas
+L'équipe LUXÎLES définit des périodes tarifaires (« saisons ») et associe des prix distincts par villa pour chaque période. Le prix affiché s'adapte automatiquement aux dates de séjour choisies par le voyageur.
+
+Fonctionnement
+    • Création d'une saison : nom, date de début et date de fin.
+    • Attribution d'un prix par nuit pour chaque villa et chaque saison.
+    • En dehors des saisons définies, le prix de base de la villa s'applique.
+    • En cas de chevauchement de deux saisons sur les mêmes dates, le tarif le plus élevé s'applique automatiquement.
+    • Des tarifs spéciaux peuvent être créés pour des périodes clés : Noël, Nouvel An, Carnaval, vacances scolaires.
+    • Les saisons ne se reconduisent pas automatiquement d'une année sur l'autre (recréation manuelle chaque année).
+    • Le voyageur voit uniquement le prix affiché — le nom de la saison n'est pas visible côté client.
+
+  ✔ VALIDÉ — Chevauchement : le tarif le plus élevé s'applique.
+  ✔ VALIDÉ — Tarifs spéciaux pour jours fériés et périodes clés : oui.
+  ✔ VALIDÉ — Pas de reconduction automatique des saisons.
+  ✔ VALIDÉ — Le voyageur voit uniquement le prix, pas le nom de la saison.
+
+⭐  3.4  Système d'avis et de notation des villas
+Après leur séjour, les voyageurs LUXÎLES peuvent déposer un avis et une note sur la villa concernée. Chaque avis est soumis à validation de l'équipe avant publication. L'équipe peut également répondre publiquement aux avis.
+
+Fonctionnement
+    • Seul un voyageur ayant effectué une réservation confirmée et terminée peut déposer un avis.
+    • L'avis comprend un commentaire libre (texte) et une note globale en étoiles (de 1 à 5).
+    • Le voyageur dispose de 30 jours après la date de départ pour déposer son avis. Passé ce délai, le formulaire est automatiquement fermé.
+    • Chaque avis soumis est en attente de modération — il n'est pas publié immédiatement.
+    • L'équipe LUXÎLES valide, modère ou refuse chaque avis depuis le back-office avant publication.
+    • Une fois publié, l'avis apparaît sur la fiche de la villa avec le prénom du voyageur.
+    • L'équipe LUXÎLES peut rédiger une réponse publique visible sous l'avis du voyageur.
+    • La note moyenne de chaque villa est calculée automatiquement et affichée en synthèse sur la fiche.
+
+  ✔ VALIDÉ — Modération préalable obligatoire avant toute publication d'avis.
+  ✔ VALIDÉ — L'équipe LUXÎLES peut répondre publiquement aux avis.
+  ✔ VALIDÉ — Délai de dépôt d'un avis : 30 jours après la fin du séjour.
+
+🛏️  3.5  Gestion des équipements et prestations des villas
+L'équipe LUXÎLES configure librement les équipements de chaque villa. Certains équipements sont utilisés comme critères de filtre dans le moteur de recherche du site.
+
+Fonctionnement
+    • Ajout, modification ou suppression des équipements par villa depuis le back-office.
+    • Représentation par icône + libellé texte (ex. 🏊 Piscine privée, 🌊 Vue mer, 🚗 Parking).
+    • L'équipe peut créer librement de nouveaux équipements dans le référentiel sans validation préalable.
+    • Certains équipements sont configurés comme filtres actifs dans le moteur de recherche.
+
+  ✔ VALIDÉ — Certains équipements servent de filtres de recherche actifs.
+  ✔ VALIDÉ — L'équipe peut créer des équipements librement.
+
+📆  3.6  Règle de durée minimale de séjour — configurable par villa
+La durée minimale de séjour est paramétrable individuellement pour chaque villa depuis le back-office. Ce paramètre peut être modifié à tout moment par l'équipe LUXÎLES, sans intervention technique.
+
+Durées minimales actuellement définies
+Villa
+Durée minimale actuelle
+Modifiable depuis le back-office
+Villa Aurélio — Saint-Martin
+4 nuits
+Oui — paramétrable à tout moment
+Villa Soléro — Saint-Martin
+4 nuits
+Oui — paramétrable à tout moment
+Villa Élios — Marie-Galante
+2 nuits
+Oui — paramétrable à tout moment
+
+Règles de gestion
+    • Toute tentative de réservation inférieure à la durée minimale configurée pour la villa est automatiquement bloquée.
+    • Un message explicatif est affiché au voyageur lors de la sélection des dates. Ce message l'invite à contacter directement l'équipe LUXÎLES pour toute demande spécifique.
+    • La durée minimale est configurable villa par villa, indépendamment des autres villas et des saisons.
+    • La modification de la durée minimale prend effet immédiatement sur la plateforme, sans délai ni intervention technique.
+
+  ℹ️  Gestion back-office — Sur la fiche de chaque villa, l'équipe LUXÎLES dispose d'un champ
+      « Durée minimale de séjour (nuits) » modifiable librement. La valeur est appliquée en temps réel.
+
+  ✔ VALIDÉ — Durée minimale configurable par villa depuis le back-office (sans intervention technique).
+  ✔ VALIDÉ — Valeurs actuelles : Saint-Martin = 4 nuits / Marie-Galante = 2 nuits.
+  ✔ VALIDÉ — Message au voyageur : invitation à contacter l'équipe LUXÎLES.
+
+👥  3.7  Capacité maximale par villa
+Chaque villa dispose d'une capacité maximale configurée dans le back-office. Le moteur de recherche filtre automatiquement les villas selon le nombre de voyageurs saisi.
+
+Villa
+Capacité maximale
+Comportement
+Villa Aurélio
+8 personnes
+Non affichée au-delà de 8 voyageurs dans les résultats
+Villa Soléro
+8 personnes
+Non affichée au-delà de 8 voyageurs dans les résultats
+Villa Élios
+4 personnes
+Non affichée au-delà de 4 voyageurs dans les résultats
+
+  ✔ VALIDÉ — Capacités définies : Aurélio & Soléro 8 pers., Élios 4 pers.
+
+📊  3.8  Tableau de bord — Suivi de la fréquentation
+L'équipe LUXÎLES consulte les statistiques de fréquentation de luxiles.fr directement depuis le back-office de la plateforme, sans outil externe.
+
+Données disponibles dans le back-office
+    • Nombre de visiteurs uniques sur la période sélectionnée.
+    • Nombre de pages vues et pages les plus consultées (fiches villas, destinations).
+    • Sources de trafic : moteurs de recherche, réseaux sociaux, accès direct (optionnel).
+    • Origine géographique des visiteurs (optionnel).
+
+  ✔ VALIDÉ — Les statistiques sont intégrées directement dans le back-office LUXÎLES.
+
+➕  3.9  Inscription manuelle d'un client par l'équipe
+L'équipe LUXÎLES peut créer directement un compte voyageur dans la plateforme, notamment pour les clients contactés hors ligne (téléphone, salon, séjour longue durée avec tarif négocié).
+
+Fonctionnement
+    • Depuis le back-office, l'équipe crée un profil voyageur : nom, prénom, email, téléphone.
+    • À la création du compte, un email est automatiquement envoyé au voyageur.
+    • Cet email contient un lien sécurisé permettant au voyageur de définir lui-même son mot de passe.
+    • Une fois son mot de passe défini, le voyageur accède à son espace client complet.
+    • Le statut Privilege Club est attribué automatiquement ou ajusté manuellement selon son historique.
+
+  ✔ VALIDÉ — Email automatique envoyé au voyageur à la création de son compte.
+  ✔ VALIDÉ — Le voyageur reçoit un lien par email pour définir son mot de passe.
+
+📎  3.10  Gestion des contrats dans le dossier client
+L'équipe LUXÎLES peut téléverser des documents (contrats, devis, accords particuliers) directement dans le dossier d'un client. Le voyageur peut consulter et télécharger ses documents depuis son espace client.
+
+Fonctionnement
+    • Depuis la fiche d'un voyageur en back-office, l'équipe téléverse un ou plusieurs fichiers.
+    • Formats acceptés : PDF et Word (.docx).
+    • Taille maximale par fichier : 15 Mo.
+    • Chaque document est horodaté et peut être nommé librement (ex. « Contrat séjour juillet 2025 »).
+    • Le voyageur peut consulter ET télécharger ses documents depuis son espace client personnel.
+    • L'équipe peut supprimer ou remplacer un document depuis le back-office.
+
+  ✔ VALIDÉ — Formats acceptés : PDF et Word (.docx).
+  ✔ VALIDÉ — Taille maximale par fichier : 15 Mo.
+  ✔ VALIDÉ — Le voyageur peut télécharger ses documents depuis son espace client.
+
+🔗  3.11  Association de réservations manuelles au dossier client
+L'équipe LUXÎLES peut saisir manuellement des réservations effectuées hors ligne (téléphone, email, agence) et les rattacher au dossier du client concerné, avec suivi du paiement.
+
+Fonctionnement
+    • Depuis le back-office, l'équipe crée une réservation manuelle : client, villa, dates, nombre de voyageurs, montant convenu.
+    • À la création, un email de confirmation est automatiquement envoyé au voyageur.
+    • La fiche de réservation manuelle indique le mode de paiement (virement, chèque, espèces, etc.) et le statut de paiement (réglé / acompte versé / en attente).
+    • La réservation manuelle apparaît dans l'historique du voyageur (espace client) comme toute réservation en ligne.
+    • Elle est comptabilisée dans le calcul du statut Privilege Club si le séjour est confirmé et réalisé.
+    • L'équipe peut modifier ou annuler une réservation manuelle depuis le back-office.
+
+Cas d'usage
+Un client appelle l'équipe LUXÎLES pour réserver la Villa Soléro pendant 10 jours à un tarif négocié. L'équipe saisit la réservation manuellement, indique le virement comme mode de paiement avec statut « acompte versé », puis téléverse le contrat signé dans le dossier. Le client retrouve tout son dossier dans son espace client.
+
+  ✔ VALIDÉ — Email de confirmation automatique envoyé au voyageur à la création.
+  ✔ VALIDÉ — Mode de paiement et statut de paiement intégrés à la fiche de réservation manuelle.
+
+4. Parcours utilisateur
+
+
+4.1  Voyageur — Réservation d'une villa LUXÎLES
+    • 1.  Le voyageur se connecte à luxiles.fr et choisit une destination (Saint-Martin, Guadeloupe, Marie-Galante).
+    • 2.  Il saisit ses dates de séjour et son nombre de voyageurs. La durée minimale applicable varie selon la villa sélectionnée (ex. 4 nuits pour les villas de Saint-Martin, 2 nuits pour Marie-Galante).
+    • 3.  Les villas dont la capacité est insuffisante sont automatiquement exclues des résultats.
+    • 4.  Il filtre les résultats par équipements (piscine, vue mer, etc.) si souhaité.
+    • 5.  Le prix affiché correspond au tarif de la saison active — si deux saisons se chevauchent, le tarif le plus élevé s'applique.
+    • 6.  Il finalise sa réservation (avec code promo si applicable) et reçoit un email de confirmation.
+    • 7.  Sa réservation confirmée est comptabilisée dans son solde Privilege Club, pouvant déclencher un changement de niveau avec notification.
+
+4.2  Voyageur — Dépôt d'un avis après séjour
+    • 1.  Dans les 30 jours suivant son départ, le voyageur est invité à déposer un avis.
+    • 2.  Il rédige un commentaire et attribue une note de 1 à 5 étoiles.
+    • 3.  L'avis est soumis en attente de modération — non visible immédiatement.
+    • 4.  L'équipe LUXÎLES valide ou refuse l'avis depuis le back-office.
+    • 5.  Une fois publié, l'avis est visible sur la fiche de la villa. L'équipe peut y répondre publiquement.
+
+4.3  Équipe LUXÎLES — Gestion complète d'un client hors ligne
+    • 1.  L'équipe crée manuellement le profil du client en back-office → email + lien de connexion envoyés au voyageur (§3.9).
+    • 2.  Elle crée la réservation manuelle associée au dossier du client, avec mode et statut de paiement (§3.11).
+    • 3.  Elle téléverse le contrat signé (PDF ou Word, 15 Mo max) dans le dossier du client (§3.10).
+    • 4.  Le client reçoit un email de confirmation de réservation et retrouve son dossier complet dans son espace client.
+
+5. Back-office — Administration LUXÎLES
+
+
+L'interface d'administration centralise la gestion de l'ensemble des fonctionnalités. Voici le tableau complet des modules disponibles après développement.
+
+Module back-office
+Actions disponibles pour l'équipe LUXÎLES
+Voyageurs & Privilege Club
+Créer manuellement un profil voyageur ; visualiser et ajuster le statut (INSIDER / SIGNATURE / LEGEND) ; envoyer le lien de création de mot de passe
+Réservations
+Consulter et gérer toutes les réservations (en ligne et manuelles) ; créer une réservation manuelle avec mode et statut de paiement ; annuler ou modifier
+Documents & contrats
+Téléverser, nommer, consulter et supprimer des documents (PDF, Word — 15 Mo max) dans le dossier d'un client
+Codes promotionnels
+Créer et gérer les codes promotionnels depuis le back-office ; les attribuer à des clients ciblés
+Saisons & tarifs
+Créer, modifier, supprimer des saisons ; définir les prix par nuit pour chaque villa et chaque saison
+Durée minimale par villa
+Configurer librement la durée minimale de séjour pour chaque villa (ex. 4 nuits pour St-Martin, 2 nuits pour Marie-Galante) — modifiable à tout moment
+Capacités des villas
+Définir et modifier la capacité maximale d'accueil de chaque villa
+Avis voyageurs
+Consulter les avis soumis ; valider, modérer ou refuser ; rédiger une réponse publique
+Équipements des villas
+Gérer le référentiel d'équipements ; les associer villa par villa ; configurer les filtres de recherche
+Statistiques de trafic
+Consulter les données de fréquentation de luxiles.fr directement dans le back-office
+
+6. Récapitulatif des validations
+
+
+Toutes les décisions ont été validées par le client. Le tableau ci-dessous récapitule les points clés confirmés dans cette version finale.
+
+Réf.
+Point validé
+Décision
+§3.1
+Page Privilege Club — Accès
+Membres connectés uniquement — pas de reconnexion requise
+§3.2
+Gestion des codes promotionnels
+Créés et gérés depuis le back-office LUXÎLES
+§3.4
+Modération des avis
+Validation préalable obligatoire — délai 30 jours
+§3.6
+Durée minimale de séjour
+Configurable par villa — 4 nuits St-Martin / 2 nuits Marie-Galante
+§3.7
+Capacité des villas
+Aurélio & Soléro : 8 pers. — Élios : 4 pers.
+§3.8
+Statistiques de trafic
+Intégrées dans le back-office LUXÎLES
+§3.9
+Inscription manuelle — notification
+Email automatique + lien de définition du mot de passe
+§3.10
+Taille max des documents téléversés
+15 Mo par fichier — PDF et Word acceptés
+§3.11
+Réservations manuelles — suivi paiement
+Mode et statut de paiement intégrés à la fiche
+
+7. Hors périmètre — Non inclus dans cette version
+
+
+Les éléments suivants sont explicitement exclus de ce périmètre. Leur développement ultérieur fera l'objet d'un avenant signé.
+
+    • Espace blog — reporté à une version ultérieure (décision client v2.0)
+    • Application mobile native LUXÎLES (iOS / Android)
+    • Paiement en ligne automatisé ou gestion de facturation intégrée
+    • Synchronisation avec plateformes tierces (Airbnb, Booking.com, Abritel)
+    • Traduction multilingue de la plateforme
+    • Programme de parrainage ou de points de fidélité cumulatifs
+
+8. Validation — Bon pour développement
+
+
+Ce document constitue la version 4.0 et définitive du cahier des charges LUXÎLES. Aucun point n'est en suspens. Sa signature autorise le démarrage immédiat des développements. Toute modification ultérieure du périmètre fera l'objet d'un avenant.
+
+Rôle
+Nom & Prénom
+Signature / Date
+Client / Maître d'ouvrage
+ 
+ 
+Chef de projet LUXÎLES
+ 
+ 
+Responsable technique
+ 
+ 
+
+— LUXÎLES — L'Excellence des Caraïbes à votre portée —
+luxiles.fr  —  Cahier des charges v4.0 — DÉFINITIF
