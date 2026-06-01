@@ -36,9 +36,9 @@ class PrivilegeClubPageTest extends TestCase
             $table->string('email')->unique();
             $table->string('password');
             $table->boolean('is_admin')->default(false);
-            $table->string('privilege_club_tier', 20)->nullable();
-            $table->boolean('privilege_club_tier_locked')->default(false);
-            $table->timestamp('privilege_club_tier_updated_at')->nullable();
+            $table->string('privilege_tier', 20)->nullable();
+            $table->boolean('privilege_tier_manual_override')->default(false);
+            $table->timestamp('privilege_tier_updated_at')->nullable();
             $table->timestamps();
         });
 
@@ -72,6 +72,7 @@ class PrivilegeClubPageTest extends TestCase
             $table->string('new_tier', 20)->nullable();
             $table->text('message');
             $table->timestamp('read_at')->nullable();
+            $table->timestamp('whatsapp_sent_at')->nullable();
             $table->timestamps();
         });
 
@@ -80,7 +81,7 @@ class PrivilegeClubPageTest extends TestCase
             'last_name' => 'Client',
             'email' => 'marie@test.luxiles.fr',
             'password' => Hash::make('password'),
-            'privilege_club_tier' => 'insider',
+            'privilege_tier' => 'insider',
         ]);
     }
 

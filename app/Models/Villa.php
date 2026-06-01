@@ -118,19 +118,19 @@ class Villa extends Model
 
     public function publishedReviews()
     {
-        return $this->reviews()->published()->orderByDesc('published_at');
+        return $this->reviews()->approved()->orderByDesc('published_at');
     }
 
     public function averageRating(): ?float
     {
-        $avg = $this->reviews()->published()->avg('rating');
+        $avg = $this->reviews()->approved()->avg('rating');
 
         return $avg !== null ? round((float) $avg, 1) : null;
     }
 
     public function publishedReviewsCount(): int
     {
-        return $this->reviews()->published()->count();
+        return $this->reviews()->approved()->count();
     }
 
     /**
@@ -179,7 +179,7 @@ class Villa extends Model
         foreach ($seasonalPrices as $seasonalPrice) {
             $season = $seasonalPrice->season;
 
-            if ($season && $this->isDateInSeason($date, $season)) {
+            if ($season && $season->is_active && $this->isDateInSeason($date, $season)) {
                 $matchingPrices[] = (float) $seasonalPrice->price_per_night;
             }
         }
@@ -201,27 +201,7 @@ class Villa extends Model
      */
     public function isDateInSeason(\DateTime $date, $season): bool
     {
-        $month = (int) $date->format('n'); // 1-12
-        $day = (int) $date->format('j'); // 1-31
-        
-        $startMonth = $season->start_month;
-        $startDay = $season->start_day;
-        $endMonth = $season->end_month;
-        $endDay = $season->end_day;
-        
-        // Convertir la date en nombre pour faciliter la comparaison (mois * 100 + jour)
-        $dateValue = $month * 100 + $day;
-        $startValue = $startMonth * 100 + $startDay;
-        $endValue = $endMonth * 100 + $endDay;
-        
-        // Si la saison commence et finit dans la même année (ex: Mai à Août)
-        if ($startValue <= $endValue) {
-            return $dateValue >= $startValue && $dateValue <= $endValue;
-        } else {
-            // Saison qui chevauche deux années (ex: Décembre à Avril)
-            // La date est dans la saison si elle est >= début OU <= fin
-            return $dateValue >= $startValue || $dateValue <= $endValue;
-        }
+        return $season->containsDate($date);
     }
 
     /**

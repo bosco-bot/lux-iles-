@@ -24,7 +24,7 @@ class VillaReviewController extends Controller
 
         $counts = [
             'pending' => VillaReview::pending()->count(),
-            'published' => VillaReview::published()->count(),
+            'approved' => VillaReview::approved()->count(),
             'rejected' => VillaReview::where('status', VillaReview::STATUS_REJECTED)->count(),
         ];
 
@@ -45,7 +45,7 @@ class VillaReviewController extends Controller
         }
 
         $villaReview->update([
-            'status' => VillaReview::STATUS_PUBLISHED,
+            'status' => VillaReview::STATUS_APPROVED,
             'moderated_by' => Auth::id(),
             'moderated_at' => now(),
             'published_at' => now(),
@@ -76,7 +76,7 @@ class VillaReviewController extends Controller
 
     public function updateResponse(Request $request, VillaReview $villaReview)
     {
-        if ($villaReview->status !== VillaReview::STATUS_PUBLISHED) {
+        if ($villaReview->status !== VillaReview::STATUS_APPROVED) {
             return back()->with('error', 'La réponse publique n\'est possible que pour un avis publié.');
         }
 

@@ -58,7 +58,7 @@ php artisan schedule:work
 
 # Privilege Club
 php artisan privilege-club:sync-after-stays
-php artisan privilege-club:annual-maintenance
+php artisan privilege:annual-downgrade
 
 # Maintenance (à exécuter en CLI, pas via URL web)
 php artisan optimize:clear

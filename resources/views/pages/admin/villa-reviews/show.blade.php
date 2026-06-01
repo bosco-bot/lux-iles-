@@ -25,7 +25,7 @@
             <div class="card border shadow-sm mb-4" style="border-radius: 0.75rem;">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h2 class="h6 mb-0 text-lux-dark-blue">Avis de {{ $villaReview->user->first_name }}</h2>
-                    <span class="badge {{ $villaReview->status === 'published' ? 'bg-success' : ($villaReview->status === 'rejected' ? 'bg-danger' : 'bg-warning text-dark') }}">
+                    <span class="badge {{ $villaReview->status === 'approved' ? 'bg-success' : ($villaReview->status === 'rejected' ? 'bg-danger' : 'bg-warning text-dark') }}">
                         {{ $villaReview->statusLabel() }}
                     </span>
                 </div>
@@ -40,11 +40,16 @@
                         <span class="ms-2 text-lux-greyBlue small">{{ $villaReview->rating }}/5</span>
                     </div>
                     <p class="mb-0" style="white-space: pre-line;">{{ $villaReview->comment }}</p>
-                    <p class="small text-muted mt-3 mb-0">Soumis le {{ $villaReview->created_at->format('d/m/Y à H:i') }}</p>
+                    <p class="small text-muted mt-3 mb-0">
+                        Déposé le {{ ($villaReview->submitted_at ?? $villaReview->created_at)->format('d/m/Y à H:i') }}
+                        @if($villaReview->published_at)
+                            · Publié le {{ $villaReview->published_at->format('d/m/Y à H:i') }}
+                        @endif
+                    </p>
                 </div>
             </div>
 
-            @if($villaReview->isPublished())
+            @if($villaReview->isApproved())
                 <div class="card border shadow-sm" style="border-radius: 0.75rem;">
                     <div class="card-header bg-white py-3">
                         <h2 class="h6 mb-0 text-lux-dark-blue">Réponse publique LUXÎLES</h2>

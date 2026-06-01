@@ -32,9 +32,9 @@ class User extends Authenticatable
         'is_admin',
         'is_active',
         'must_set_password',
-        'privilege_club_tier',
-        'privilege_club_tier_locked',
-        'privilege_club_tier_updated_at',
+        'privilege_tier',
+        'privilege_tier_manual_override',
+        'privilege_tier_updated_at',
         'photo_url',
     ];
 
@@ -63,8 +63,8 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'is_active' => 'boolean',
             'must_set_password' => 'boolean',
-            'privilege_club_tier_locked' => 'boolean',
-            'privilege_club_tier_updated_at' => 'datetime',
+            'privilege_tier_manual_override' => 'boolean',
+            'privilege_tier_updated_at' => 'datetime',
         ];
     }
 
@@ -75,7 +75,7 @@ class User extends Authenticatable
 
     public function privilegeClubTierLabel(): string
     {
-        return app(\App\Services\PrivilegeClubService::class)->tierLabel($this->privilege_club_tier);
+        return app(\App\Services\PrivilegeClubService::class)->tierLabel($this->privilege_tier);
     }
 
     /**

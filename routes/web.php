@@ -281,6 +281,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/clients/{client}/toggle-status', [AdminClientController::class, 'toggleStatus'])->name('clients.toggle-status');
         Route::put('/clients/{client}/privilege-club', [AdminClientController::class, 'updatePrivilegeClub'])->name('clients.privilege-club.update');
         Route::post('/clients/{client}/privilege-club/recalculate', [AdminClientController::class, 'recalculatePrivilegeClub'])->name('clients.privilege-club.recalculate');
+        Route::post('/clients/{client}/privilege-club/notifications/{notification}/whatsapp-sent', [AdminClientController::class, 'markPrivilegeClubWhatsappSent'])->name('clients.privilege-club.whatsapp-sent');
 
         // Routes Synchronisation
         Route::get('/synchronization', [SynchronizationController::class, 'index'])->name('synchronization');

@@ -232,13 +232,12 @@
                 </div>
             </form>
         </section>
-        {{-- 
-        <!-- Section Gestion des Saisons -->
-        <section class="mb-4">
+        <!-- Section Gestion des Saisons (CDC §3.3) -->
+        <section class="mb-4" id="seasons-section">
             <div class="d-flex justify-content-between align-items-end mb-4">
                 <div>
                     <h2 class="h4 font-serif text-lux-dark-blue fw-semibold mb-1" style="font-family: 'Playfair Display', serif;">Gestion des Saisons</h2>
-                    <p class="small text-lux-greyBlue mb-0">Définissez les périodes creuses et pleines pour vos tarifs.</p>
+                    <p class="small text-lux-greyBlue mb-0">Périodes tarifaires par dates précises (ex. 20/12/2026 → 05/01/2027). Les saisons ne se reconduisent pas automatiquement : recréez-les chaque année.</p>
                 </div>
                 <button type="button" class="btn text-lux-gold border border-lux-gold rounded px-4 py-2 small fw-medium bg-transparent btn-new-season" data-bs-toggle="modal" data-bs-target="#seasonModal" onclick="openSeasonModal()">
                     <i class="fa-solid fa-plus me-2"></i>Nouvelle Saison
@@ -299,8 +298,6 @@
                 </div>
             </div>
         </section>
-        --}}
-
 
         <!-- Section Politiques d'Annulation -->
         <section class="mb-4">
@@ -541,7 +538,6 @@
         }
     </style>
 
-    {{-- 
     <!-- Modal Saison -->
     <div class="modal fade" id="seasonModal" tabindex="-1" aria-labelledby="seasonModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -555,37 +551,18 @@
                     <input type="hidden" name="_method" id="seasonMethod" value="POST">
                     <div class="modal-body">
                         <div class="mb-4">
-                            <label class="form-label small text-uppercase fw-medium text-lux-greyBlue mb-2">Nom de la saison</label>
-                            <input type="text" name="name" id="seasonName" class="form-control" required style="border-color: rgba(138, 150, 166, 0.3);" placeholder="ex: Haute Saison">
-                        </div>
-                        
-                        <div class="row g-3 mb-4">
-                            <div class="col-6">
-                                <label class="form-label small text-uppercase fw-medium text-lux-greyBlue mb-2">Début (Mois)</label>
-                                <select name="start_month" id="seasonStartMonth" class="form-select" required style="border-color: rgba(138, 150, 166, 0.3);">
-                                    @foreach([1=>'Janvier', 2=>'Février', 3=>'Mars', 4=>'Avril', 5=>'Mai', 6=>'Juin', 7=>'Juillet', 8=>'Août', 9=>'Septembre', 10=>'Octobre', 11=>'Novembre', 12=>'Décembre'] as $num => $month)
-                                        <option value="{{ $num }}">{{ $num }} - {{ $month }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small text-uppercase fw-medium text-lux-greyBlue mb-2">Début (Jour)</label>
-                                <input type="number" name="start_day" id="seasonStartDay" class="form-control" min="1" max="31" value="1" required style="border-color: rgba(138, 150, 166, 0.3);">
-                            </div>
+                            <label class="form-label small text-uppercase fw-medium text-lux-greyBlue mb-2">Nom de la saison (interne)</label>
+                            <input type="text" name="name" id="seasonName" class="form-control" required style="border-color: rgba(138, 150, 166, 0.3);" placeholder="ex: Noël 2026, Haute saison été 2026">
                         </div>
 
                         <div class="row g-3 mb-4">
                             <div class="col-6">
-                                <label class="form-label small text-uppercase fw-medium text-lux-greyBlue mb-2">Fin (Mois)</label>
-                                <select name="end_month" id="seasonEndMonth" class="form-select" required style="border-color: rgba(138, 150, 166, 0.3);">
-                                    @foreach([1=>'Janvier', 2=>'Février', 3=>'Mars', 4=>'Avril', 5=>'Mai', 6=>'Juin', 7=>'Juillet', 8=>'Août', 9=>'Septembre', 10=>'Octobre', 11=>'Novembre', 12=>'Décembre'] as $num => $month)
-                                        <option value="{{ $num }}">{{ $num }} - {{ $month }}</option>
-                                    @endforeach
-                                </select>
+                                <label class="form-label small text-uppercase fw-medium text-lux-greyBlue mb-2">Date de début</label>
+                                <input type="date" name="start_date" id="seasonStartDate" class="form-control" required style="border-color: rgba(138, 150, 166, 0.3);">
                             </div>
                             <div class="col-6">
-                                <label class="form-label small text-uppercase fw-medium text-lux-greyBlue mb-2">Fin (Jour)</label>
-                                <input type="number" name="end_day" id="seasonEndDay" class="form-control" min="1" max="31" value="1" required style="border-color: rgba(138, 150, 166, 0.3);">
+                                <label class="form-label small text-uppercase fw-medium text-lux-greyBlue mb-2">Date de fin</label>
+                                <input type="date" name="end_date" id="seasonEndDate" class="form-control" required style="border-color: rgba(138, 150, 166, 0.3);">
                             </div>
                         </div>
 
@@ -593,7 +570,7 @@
                             <input class="form-check-input" type="checkbox" name="is_active" id="seasonIsActive" value="1" checked>
                             <label class="form-check-label small text-lux-dark-blue" for="seasonIsActive">Saison active</label>
                         </div>
-                        <p class="small text-lux-greyBlue fst-italic">Note : Les saisons peuvent chevaucher deux années (ex: de Décembre à Janvier).</p>
+                        <p class="small text-lux-greyBlue fst-italic mb-0">En cas de chevauchement sur les mêmes dates, le tarif le plus élevé s'applique au voyageur. Recréez les saisons chaque année civile.</p>
                     </div>
                     <div class="modal-footer border-0">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
@@ -603,7 +580,6 @@
             </div>
         </div>
     </div>
-    --}}
 
     <!-- Modal Administrateur -->
     <div class="modal fade" id="adminModal" tabindex="-1" aria-labelledby="adminModalLabel" aria-hidden="true">
@@ -1164,10 +1140,8 @@ function editSeason(id) {
         .then(response => response.json())
         .then(season => {
             document.getElementById('seasonName').value = season.name;
-            document.getElementById('seasonStartMonth').value = season.start_month;
-            document.getElementById('seasonStartDay').value = season.start_day;
-            document.getElementById('seasonEndMonth').value = season.end_month;
-            document.getElementById('seasonEndDay').value = season.end_day;
+            document.getElementById('seasonStartDate').value = season.start_date;
+            document.getElementById('seasonEndDate').value = season.end_date;
             document.getElementById('seasonIsActive').checked = season.is_active;
             
             document.getElementById('seasonMethod').value = 'PUT';
@@ -1188,7 +1162,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const tab = urlParams.get('tab');
     if (tab === 'seasons') {
         // Scroller jusqu'à la section des saisons
-        const seasonSection = document.querySelector('.btn-new-season');
+        const seasonSection = document.getElementById('seasons-section');
         if (seasonSection) {
             seasonSection.scrollIntoView({ behavior: 'smooth' });
         }

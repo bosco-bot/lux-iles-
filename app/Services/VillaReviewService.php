@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Models\VillaReview;
-use Carbon\Carbon;
+use Illuminate\Support\Carbon;
 
 class VillaReviewService
 {
@@ -50,6 +50,19 @@ class VillaReviewService
         return max(0, (int) now()->diffInDays($this->reviewDeadline($reservation), false));
     }
 
+    public function createFromReservation(User $user, Reservation $reservation, int $rating, string $comment): VillaReview
+    {
+        return VillaReview::create([
+            'villa_id' => $reservation->villa_id,
+            'reservation_id' => $reservation->id,
+            'user_id' => $user->id,
+            'rating' => $rating,
+            'comment' => $comment,
+            'status' => VillaReview::STATUS_PENDING,
+            'submitted_at' => Carbon::now(),
+        ]);
+    }
+
     public function reviewBlockReason(User $user, Reservation $reservation): ?string
     {
         if ($reservation->user_id !== $user->id) {
@@ -69,7 +82,7 @@ class VillaReviewService
         if ($review) {
             return match ($review->status) {
                 VillaReview::STATUS_PENDING => 'Votre avis est en cours de modération par notre équipe.',
-                VillaReview::STATUS_PUBLISHED => 'Vous avez déjà déposé un avis pour ce séjour.',
+                VillaReview::STATUS_APPROVED => 'Vous avez déjà déposé un avis pour ce séjour.',
                 VillaReview::STATUS_REJECTED => 'Votre avis précédent n\'a pas été publié.',
                 default => 'Un avis existe déjà pour ce séjour.',
             };

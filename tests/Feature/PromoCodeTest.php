@@ -181,10 +181,8 @@ class PromoCodeTest extends TestCase
         Schema::create('seasons', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->unsignedTinyInteger('start_month');
-            $table->unsignedTinyInteger('start_day');
-            $table->unsignedTinyInteger('end_month');
-            $table->unsignedTinyInteger('end_day');
+            $table->date('start_date');
+            $table->date('end_date');
             $table->decimal('multiplier', 5, 2)->default(1);
             $table->boolean('is_active')->default(true);
             $table->timestamps();

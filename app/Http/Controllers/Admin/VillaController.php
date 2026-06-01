@@ -41,7 +41,7 @@ class VillaController extends Controller
     {
         $islands = \App\Models\Island::all();
         $equipments = \App\Models\Equipment::all();
-        $seasons = \App\Models\Season::where('is_active', true)->orderBy('start_month')->orderBy('start_day')->get();
+        $seasons = \App\Models\Season::where('is_active', true)->orderBy('start_date')->get();
         
         return view('pages.admin.villas.create', compact('islands', 'equipments', 'seasons'));
     }
@@ -54,7 +54,7 @@ class VillaController extends Controller
         $villa = Villa::with(['island', 'photos', 'equipments', 'availabilityBlocks', 'seasonalPrices.season'])->findOrFail($id);
         $islands = \App\Models\Island::all();
         $equipments = \App\Models\Equipment::all();
-        $seasons = \App\Models\Season::where('is_active', true)->orderBy('start_month')->orderBy('start_day')->get();
+        $seasons = \App\Models\Season::where('is_active', true)->orderBy('start_date')->get();
         
         return view('pages.admin.villas.create', compact('villa', 'islands', 'equipments', 'seasons'));
     }

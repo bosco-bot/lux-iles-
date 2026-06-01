@@ -24,7 +24,7 @@ Schedule::command('privilege-club:sync-after-stays')
     ->timezone('Europe/Paris')
     ->description('Recalcul des paliers Privilege Club après départs');
 
-Schedule::command('privilege-club:annual-maintenance')
+Schedule::command('privilege:annual-downgrade')
     ->yearlyOn(1, 1, '00:15')
     ->timezone('Europe/Paris')
     ->description('Rétrogradation Privilege Club — maintenance annuelle');

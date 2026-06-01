@@ -78,6 +78,9 @@ class VillaReviewTest extends TestCase
             'status' => VillaReview::STATUS_PENDING,
             'rating' => 5,
         ]);
+
+        $review = VillaReview::where('reservation_id', $this->reservation->id)->first();
+        $this->assertNotNull($review->submitted_at);
     }
 
     #[Test]
@@ -108,7 +111,7 @@ class VillaReviewTest extends TestCase
             'user_id' => $this->user->id,
             'rating' => 4,
             'comment' => 'Très belle villa avec vue exceptionnelle.',
-            'status' => VillaReview::STATUS_PUBLISHED,
+            'status' => VillaReview::STATUS_APPROVED,
             'published_at' => now(),
         ]);
 
@@ -136,7 +139,7 @@ class VillaReviewTest extends TestCase
             ->post(route('admin.villa-reviews.approve', $review))
             ->assertRedirect();
 
-        $this->assertSame(VillaReview::STATUS_PUBLISHED, $review->fresh()->status);
+        $this->assertSame(VillaReview::STATUS_APPROVED, $review->fresh()->status);
         $this->assertNotNull($review->fresh()->published_at);
     }
 
@@ -202,10 +205,8 @@ class VillaReviewTest extends TestCase
         Schema::create('seasons', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->unsignedTinyInteger('start_month');
-            $table->unsignedTinyInteger('start_day');
-            $table->unsignedTinyInteger('end_month');
-            $table->unsignedTinyInteger('end_day');
+            $table->date('start_date');
+            $table->date('end_date');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
@@ -263,6 +264,7 @@ class VillaReviewTest extends TestCase
             $table->unsignedTinyInteger('rating');
             $table->text('comment');
             $table->string('status', 20)->default('pending');
+            $table->timestamp('submitted_at')->nullable();
             $table->text('admin_response')->nullable();
             $table->foreignId('moderated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('moderated_at')->nullable();

@@ -113,7 +113,7 @@ class PrivilegeClubService
         return null;
     }
 
-    public function calculateEarnedTier(User $user): ?string
+    public function calculateTier(User $user): ?string
     {
         return $this->tierFromStayCount($this->countQualifyingStays($user));
     }
@@ -148,18 +148,18 @@ class PrivilegeClubService
     /**
      * Recalcule et applique le palier automatique (sauf verrou admin).
      */
-    public function syncUserTier(User $user, bool $notify = true): bool
+    public function updateTierIfChanged(User $user, bool $notify = true): bool
     {
         if ($user->is_admin) {
             return false;
         }
 
-        if ($user->privilege_club_tier_locked) {
+        if ($user->privilege_tier_manual_override) {
             return false;
         }
 
-        $earnedTier = $this->calculateEarnedTier($user);
-        $currentTier = $user->privilege_club_tier;
+        $earnedTier = $this->calculateTier($user);
+        $currentTier = $user->privilege_tier;
 
         if ($earnedTier === $currentTier) {
             return false;
@@ -173,13 +173,13 @@ class PrivilegeClubService
      */
     public function downgradeOneLevel(User $user, bool $notify = true): bool
     {
-        if ($user->is_admin || $user->privilege_club_tier_locked || ! $user->privilege_club_tier) {
+        if ($user->is_admin || $user->privilege_tier_manual_override || ! $user->privilege_tier) {
             return false;
         }
 
-        $newTier = $this->previousTier($user->privilege_club_tier);
+        $newTier = $this->previousTier($user->privilege_tier);
 
-        return $this->applyTierChange($user, $newTier, $user->privilege_club_tier, $notify);
+        return $this->applyTierChange($user, $newTier, $user->privilege_tier, $notify);
     }
 
     /**
@@ -187,16 +187,17 @@ class PrivilegeClubService
      */
     public function setManualTier(User $user, ?string $tier, bool $lock = true): void
     {
-        $oldTier = $user->privilege_club_tier;
+        $oldTier = $user->privilege_tier;
 
         $user->update([
-            'privilege_club_tier' => $tier,
-            'privilege_club_tier_locked' => $lock,
-            'privilege_club_tier_updated_at' => now(),
+            'privilege_tier' => $tier,
+            'privilege_tier_manual_override' => $lock,
+            'privilege_tier_updated_at' => now(),
         ]);
 
         if ($oldTier !== $tier) {
             $this->createInAppNotification($user, $oldTier, $tier, true);
+            SendPrivilegeClubTierChangeJob::dispatch($user->fresh(), $oldTier, $tier);
         }
     }
 
@@ -204,8 +205,8 @@ class PrivilegeClubService
     {
         DB::transaction(function () use ($user, $newTier, $oldTier, $notify) {
             $user->update([
-                'privilege_club_tier' => $newTier,
-                'privilege_club_tier_updated_at' => now(),
+                'privilege_tier' => $newTier,
+                'privilege_tier_updated_at' => now(),
             ]);
 
             if ($notify) {
@@ -263,7 +264,7 @@ class PrivilegeClubService
         $synced = 0;
 
         foreach (User::whereIn('id', $userIds)->where('is_admin', false)->get() as $user) {
-            if ($this->syncUserTier($user)) {
+            if ($this->updateTierIfChanged($user)) {
                 $synced++;
             }
         }
@@ -280,8 +281,8 @@ class PrivilegeClubService
         $downgraded = 0;
 
         User::where('is_admin', false)
-            ->whereNotNull('privilege_club_tier')
-            ->where('privilege_club_tier_locked', false)
+            ->whereNotNull('privilege_tier')
+            ->where('privilege_tier_manual_override', false)
             ->chunkById(100, function ($users) use ($checkYear, &$downgraded) {
                 foreach ($users as $user) {
                     if (! $this->hadBookingInYear($user, $checkYear) && $this->downgradeOneLevel($user)) {

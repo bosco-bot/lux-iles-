@@ -273,35 +273,28 @@
             <!-- Pricing Section -->
             @if($villa->seasonalPrices->count() > 0)
             <section id="pricing" class="mb-5">
-                <h3 class="h3 font-serif text-lux-dark-blue mb-4" style="font-family: 'Playfair Display', serif; font-size: 1.5rem;">Tarification saisonnière</h3>
+                <h3 class="h3 font-serif text-lux-dark-blue mb-4" style="font-family: 'Playfair Display', serif; font-size: 1.5rem;">Tarifs par période</h3>
                 <div class="bg-white p-4 rounded border shadow-sm" style="border-color: rgba(138, 150, 166, 0.1);">
                     <div class="table-responsive">
                         <table class="table table-borderless mb-0">
                             <thead>
                                 <tr class="border-bottom" style="border-color: rgba(138, 150, 166, 0.1);">
-                                    <th class="small text-uppercase text-lux-greyBlue fw-semibold pb-3" style="letter-spacing: 0.1em;">Saison</th>
                                     <th class="small text-uppercase text-lux-greyBlue fw-semibold pb-3" style="letter-spacing: 0.1em;">Période</th>
                                     <th class="small text-uppercase text-lux-greyBlue fw-semibold pb-3 text-end" style="letter-spacing: 0.1em;">Prix / nuit</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($villa->seasonalPrices as $seasonalPrice)
+                                @if($seasonalPrice->season && $seasonalPrice->season->is_active)
                                 <tr class="align-middle">
-                                    <td class="py-3">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background-color: rgba(203, 174, 130, 0.1);">
-                                                <i class="fas fa-calendar-star text-lux-gold small"></i>
-                                            </div>
-                                            <span class="fw-medium text-lux-dark-blue">{{ $seasonalPrice->season->name }}</span>
-                                        </div>
-                                    </td>
                                     <td class="py-3 text-lux-greyBlue">
-                                        {{ $seasonalPrice->season->period }}
+                                        {{ $seasonalPrice->season->period_label_for_guest }}
                                     </td>
                                     <td class="py-3 text-end fw-bold text-lux-dark-blue">
                                         {{ number_format($seasonalPrice->price_per_night, 0, ',', ' ') }} {{ $seasonalPrice->currency ?? '€' }}
                                     </td>
                                 </tr>
+                                @endif
                                 @endforeach
                                 <tr class="align-middle border-top" style="border-color: rgba(138, 150, 166, 0.1);">
                                     <td class="py-3">
@@ -428,28 +421,13 @@
                     @php
                         $now = new \DateTime();
                         $currentPrice = $villa->getPriceForDate($now);
-                        $currentSeason = null;
-                        foreach($villa->seasonalPrices as $sp) {
-                            if($villa->isDateInSeason($now, $sp->season)) {
-                                $currentSeason = $sp->season;
-                                break;
-                            }
-                        }
                     @endphp
                     <div class="mb-4 pb-4 border-bottom" style="border-color: rgba(138, 150, 166, 0.1);">
                         <div class="d-flex align-items-baseline gap-2 mb-1">
                             <span class="h2 font-serif text-lux-dark-blue" style="font-family: 'Playfair Display', serif; font-size: 2.25rem;">{{ number_format($currentPrice, 0, ',', ' ') }} €</span>
                             <span class="text-lux-greyBlue">/ nuit</span>
                         </div>
-                        @if($currentSeason)
-                            <p class="small text-lux-gold mb-0 fw-medium">
-                                <i class="fas fa-sparkles me-1"></i> Tarif {{ $currentSeason->name }} ({{ $currentSeason->period }})
-                            </p>
-                        @elseif($villa->seasonalPrices->count() > 0)
-                            <p class="small text-lux-greyBlue mb-0">Tarif standard (hors saison)</p>
-                        @else
-                            <p class="small text-lux-greyBlue mb-0">Tarif par nuit</p>
-                        @endif
+                        <p class="small text-lux-greyBlue mb-0">Prix affiché pour la date du jour</p>
                     </div>
 
                     <!-- Booking Form -->
@@ -925,29 +903,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 200);
         
     // Passer les tarifs saisonniers au JavaScript
-    const seasonalPrices = @json($villa->seasonalPrices()->with('season')->get());
+    const seasonalPrices = @json(
+        $villa->seasonalPrices()
+            ->whereHas('season', fn ($q) => $q->where('is_active', true))
+            ->with('season')
+            ->get()
+    );
     const basePricePerNightGlobal = {{ $villa->base_price_per_night }};
 
     function getPriceForDateJS(date) {
-        const month = date.getMonth() + 1;
-        const day = date.getDate();
-        const dateValue = month * 100 + day;
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${d}`;
 
         let maxPrice = null;
 
         for (const sp of seasonalPrices) {
             const s = sp.season;
-            const startValue = s.start_month * 100 + s.start_day;
-            const endValue = s.end_month * 100 + s.end_day;
-
-            let inSeason = false;
-            if (startValue <= endValue) {
-                inSeason = (dateValue >= startValue && dateValue <= endValue);
-            } else {
-                inSeason = (dateValue >= startValue || dateValue <= endValue);
+            if (!s || !s.start_date || !s.end_date) {
+                continue;
             }
-
-            if (inSeason) {
+            if (dateStr >= s.start_date && dateStr <= s.end_date) {
                 const price = parseFloat(sp.price_per_night);
                 if (maxPrice === null || price > maxPrice) {
                     maxPrice = price;

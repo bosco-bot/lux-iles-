@@ -1,47 +1,47 @@
 <?php
 
-require 'vendor/autoload.php';
-$app = require_once 'bootstrap/app.php';
-$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
+/**
+ * Script CLI — met à jour les saisons avec des dates calendaires (CDC §3.3).
+ * Usage : php update_seasons.php [année]
+ */
+
+require __DIR__.'/vendor/autoload.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 use App\Models\Season;
 
-$seasonsToUpdate = [
+$year = (int) ($argv[1] ?? now()->format('Y'));
+
+$definitions = [
     [
-        'name' => 'Haute Saison',
-        'start_month' => 12,
-        'start_day' => 18,
-        'end_month' => 1,
-        'end_day' => 2,
+        'name' => 'Fêtes de fin d\'année '.$year,
+        'start_date' => "{$year}-12-18",
+        'end_date' => ($year + 1).'-01-02',
     ],
     [
-        'name' => 'Moyenne Saison',
-        'start_month' => 1,
-        'start_day' => 3,
-        'end_month' => 4,
-        'end_day' => 15,
+        'name' => 'Haute saison hiver '.($year + 1),
+        'start_date' => ($year + 1).'-01-03',
+        'end_date' => ($year + 1).'-04-15',
     ],
     [
-        'name' => 'Basse Saison',
-        'start_month' => 4,
-        'start_day' => 16,
-        'end_month' => 12,
-        'end_day' => 17,
+        'name' => 'Saison inter-saison '.$year,
+        'start_date' => "{$year}-04-16",
+        'end_date' => "{$year}-12-17",
     ],
 ];
 
-foreach ($seasonsToUpdate as $data) {
+foreach ($definitions as $data) {
     $season = Season::updateOrCreate(
         ['name' => $data['name']],
         [
-            'start_month' => $data['start_month'],
-            'start_day' => $data['start_day'],
-            'end_month' => $data['end_month'],
-            'end_day' => $data['end_day'],
-            'is_active' => true
+            'start_date' => $data['start_date'],
+            'end_date' => $data['end_date'],
+            'is_active' => true,
         ]
     );
-    echo "Saison '{$data['name']}' mise à jour : {$season->period}\n";
+
+    echo "Saison « {$season->name} » : {$season->period}\n";
 }
 
-echo "Mise à jour terminée avec succès.\n";
+echo "Terminé pour l'année de référence {$year}.\n";

@@ -153,8 +153,8 @@
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
                         <label class="small text-uppercase text-lux-greyBlue">Statut actuel</label>
-                        <p class="fw-semibold text-lux-dark-blue mb-0">{{ $clubService->tierLabel($client->privilege_club_tier) }}</p>
-                        @if($client->privilege_club_tier_locked)
+                        <p class="fw-semibold text-lux-dark-blue mb-0">{{ $clubService->tierLabel($client->privilege_tier) }}</p>
+                        @if($client->privilege_tier_manual_override)
                             <span class="badge bg-secondary bg-opacity-10 text-secondary mt-1">Verrouillé (manuel)</span>
                         @endif
                     </div>
@@ -172,28 +172,89 @@
                     @method('PUT')
                     <div class="col-md-4">
                         <label class="form-label small">Attribuer un palier</label>
-                        <select name="privilege_club_tier" class="form-select form-select-sm">
+                        <select name="privilege_tier" class="form-select form-select-sm">
                             <option value="">— Non membre —</option>
                             @foreach($tierDefinitions as $key => $tier)
-                                <option value="{{ $key }}" {{ $client->privilege_club_tier === $key ? 'selected' : '' }}>{{ $tier['label'] }}</option>
+                                <option value="{{ $key }}" {{ $client->privilege_tier === $key ? 'selected' : '' }}>{{ $tier['label'] }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-md-4">
                         <div class="form-check mt-4">
-                            <input class="form-check-input" type="checkbox" name="privilege_club_tier_locked" value="1" id="tier_locked" {{ $client->privilege_club_tier_locked ? 'checked' : '' }}>
+                            <input class="form-check-input" type="checkbox" name="privilege_tier_manual_override" value="1" id="tier_locked" {{ $client->privilege_tier_manual_override ? 'checked' : '' }}>
                             <label class="form-check-label small" for="tier_locked">Verrouiller (ignorer le calcul auto)</label>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <button type="submit" class="btn btn-sm btn-lux-primary text-white w-100">Enregistrer le statut</button>
+                        <button type="submit" class="btn btn-sm btn-lux-primary text-white w-100">Forcer le statut</button>
                     </div>
                 </form>
                 <form action="{{ route('admin.clients.privilege-club.recalculate', $client) }}" method="POST" class="d-inline">
                     @csrf
                     <input type="hidden" name="unlock" value="1">
-                    <button type="submit" class="btn btn-sm btn-outline-secondary">Recalculer selon l'historique</button>
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Recalculer automatiquement</button>
                 </form>
+
+                {{-- Checklist WhatsApp manuelle (CDC §3.1) --}}
+                <div class="border-top mt-4 pt-4" style="border-color: rgba(0,0,0,0.08) !important;">
+                    <h4 class="h6 text-lux-dark-blue mb-2">
+                        <i class="fa-brands fa-whatsapp text-success me-2"></i>Messages WhatsApp
+                    </h4>
+                    <p class="small text-lux-greyBlue mb-3">
+                        Lors d'un changement de palier, envoyez le message de félicitations depuis WhatsApp
+                        @if($client->phone)
+                            (<a href="https://wa.me/{{ preg_replace('/\D+/', '', $client->phone) }}" target="_blank" rel="noopener" class="text-lux-gold">{{ $client->phone }}</a>)
+                        @else
+                            <span class="text-warning">— aucun téléphone renseigné sur la fiche</span>
+                        @endif
+                        puis cochez ci-dessous pour tracer l'envoi.
+                    </p>
+
+                    @if($pendingWhatsappNotifications->isNotEmpty())
+                        <div class="d-flex flex-column gap-3">
+                            @foreach($pendingWhatsappNotifications as $notification)
+                                <div class="rounded border p-3 d-flex flex-wrap justify-content-between align-items-center gap-3" style="border-color: rgba(203, 174, 130, 0.4) !important; background-color: rgba(203, 174, 130, 0.06);">
+                                    <div>
+                                        <span class="badge bg-warning text-dark mb-2">WhatsApp en attente</span>
+                                        <p class="small mb-1 text-lux-dark-blue">{{ $notification->message }}</p>
+                                        <p class="small text-lux-greyBlue mb-0">
+                                            {{ $notification->created_at->format('d/m/Y à H:i') }}
+                                            @if($notification->old_tier)
+                                                — {{ $clubService->tierLabel($notification->old_tier) }}
+                                            @else
+                                                — Non membre
+                                            @endif
+                                            → <strong>{{ $clubService->tierLabel($notification->new_tier) }}</strong>
+                                        </p>
+                                    </div>
+                                    <form action="{{ route('admin.clients.privilege-club.whatsapp-sent', [$client, $notification]) }}" method="POST" class="mb-0">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-success text-white">
+                                            <i class="fa-brands fa-whatsapp me-1"></i> Marquer WhatsApp envoyé
+                                        </button>
+                                    </form>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="small text-lux-greyBlue mb-0">
+                            <i class="fa-solid fa-circle-check text-success me-1"></i> Aucun message WhatsApp en attente pour ce client.
+                        </p>
+                    @endif
+
+                    @if($recentWhatsappSentNotifications->isNotEmpty())
+                        <p class="small text-uppercase fw-medium text-lux-greyBlue mt-4 mb-2" style="font-size: 0.7rem;">Historique récent</p>
+                        <ul class="list-unstyled small text-lux-greyBlue mb-0">
+                            @foreach($recentWhatsappSentNotifications as $sent)
+                                <li class="mb-1">
+                                    <i class="fa-solid fa-check text-success me-1"></i>
+                                    Envoyé le {{ $sent->whatsapp_sent_at->format('d/m/Y à H:i') }}
+                                    — {{ $clubService->tierLabel($sent->new_tier) }}
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
             </section>
 
             <!-- Dossier documents (§3.10 CDC) -->

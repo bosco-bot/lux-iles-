@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -11,45 +12,59 @@ class Season extends Model
 
     protected $fillable = [
         'name',
-        'start_month',
-        'start_day',
-        'end_month',
-        'end_day',
+        'start_date',
+        'end_date',
         'multiplier',
         'is_active',
     ];
 
     protected $casts = [
-        'start_month' => 'integer',
-        'start_day' => 'integer',
-        'end_month' => 'integer',
-        'end_day' => 'integer',
+        'start_date' => 'date',
+        'end_date' => 'date',
         'multiplier' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 
-    /**
-     * Relation avec les tarifs saisonniers des villas
-     */
     public function villaSeasonalPrices()
     {
         return $this->hasMany(VillaSeasonalPrice::class);
     }
 
     /**
-     * Obtenir la période formatée
+     * CDC §3.3 : une date appartient à la saison si elle est dans [start_date, end_date]
+     * (période calendaire précise, sans reconduction automatique d'une année à l'autre).
+     */
+    public function containsDate(\DateTimeInterface|string $date): bool
+    {
+        if (! $this->start_date || ! $this->end_date) {
+            return false;
+        }
+
+        $date = Carbon::parse($date)->startOfDay();
+
+        return $date->betweenIncluded(
+            $this->start_date->copy()->startOfDay(),
+            $this->end_date->copy()->startOfDay()
+        );
+    }
+
+    /**
+     * Période affichée (admin / back-office).
      */
     public function getPeriodAttribute(): string
     {
-        $months = [
-            1 => 'Janvier', 2 => 'Février', 3 => 'Mars', 4 => 'Avril',
-            5 => 'Mai', 6 => 'Juin', 7 => 'Juillet', 8 => 'Août',
-            9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Décembre'
-        ];
-        
-        $start = $months[$this->start_month] . ' ' . $this->start_day;
-        $end = $months[$this->end_month] . ' ' . $this->end_day;
-        
-        return $start . ' - ' . $end;
+        if (! $this->start_date || ! $this->end_date) {
+            return '';
+        }
+
+        return $this->start_date->format('d/m/Y').' — '.$this->end_date->format('d/m/Y');
+    }
+
+    /**
+     * Libellé période côté voyageur (sans nom de saison — CDC §3.3).
+     */
+    public function getPeriodLabelForGuestAttribute(): string
+    {
+        return $this->period;
     }
 }

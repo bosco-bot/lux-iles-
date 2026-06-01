@@ -64,9 +64,9 @@ class PrivilegeClubServiceTest extends TestCase
             $this->createCompletedStay($user, $villa, Carbon::now()->subMonths(6 + $i));
         }
 
-        $this->service->syncUserTier($user, notify: false);
+        $this->service->updateTierIfChanged($user, notify: false);
 
-        $this->assertSame(PrivilegeClubService::TIER_SIGNATURE, $user->fresh()->privilege_club_tier);
+        $this->assertSame(PrivilegeClubService::TIER_SIGNATURE, $user->fresh()->privilege_tier);
     }
 
     #[Test]
@@ -74,8 +74,8 @@ class PrivilegeClubServiceTest extends TestCase
     {
         $user = $this->createUser();
         $user->update([
-            'privilege_club_tier' => PrivilegeClubService::TIER_INSIDER,
-            'privilege_club_tier_locked' => true,
+            'privilege_tier' => PrivilegeClubService::TIER_INSIDER,
+            'privilege_tier_manual_override' => true,
         ]);
 
         $villa = $this->createVilla();
@@ -83,20 +83,20 @@ class PrivilegeClubServiceTest extends TestCase
             $this->createCompletedStay($user, $villa, Carbon::now()->subMonths($i + 1));
         }
 
-        $this->service->syncUserTier($user, notify: false);
+        $this->service->updateTierIfChanged($user, notify: false);
 
-        $this->assertSame(PrivilegeClubService::TIER_INSIDER, $user->fresh()->privilege_club_tier);
+        $this->assertSame(PrivilegeClubService::TIER_INSIDER, $user->fresh()->privilege_tier);
     }
 
     #[Test]
     public function annual_maintenance_downgrades_when_no_booking_previous_year(): void
     {
         $user = $this->createUser();
-        $user->update(['privilege_club_tier' => PrivilegeClubService::TIER_SIGNATURE]);
+        $user->update(['privilege_tier' => PrivilegeClubService::TIER_SIGNATURE]);
 
         $this->service->runAnnualMaintenance(Carbon::now()->year - 1);
 
-        $this->assertSame(PrivilegeClubService::TIER_INSIDER, $user->fresh()->privilege_club_tier);
+        $this->assertSame(PrivilegeClubService::TIER_INSIDER, $user->fresh()->privilege_tier);
     }
 
     private function createSchema(): void
@@ -108,9 +108,9 @@ class PrivilegeClubServiceTest extends TestCase
             $table->string('email')->unique();
             $table->string('password');
             $table->boolean('is_admin')->default(false);
-            $table->string('privilege_club_tier', 20)->nullable();
-            $table->boolean('privilege_club_tier_locked')->default(false);
-            $table->timestamp('privilege_club_tier_updated_at')->nullable();
+            $table->string('privilege_tier', 20)->nullable();
+            $table->boolean('privilege_tier_manual_override')->default(false);
+            $table->timestamp('privilege_tier_updated_at')->nullable();
             $table->timestamps();
         });
 

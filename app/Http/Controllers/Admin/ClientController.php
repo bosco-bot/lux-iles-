@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SendAccountInvitationEmailJob;
+use App\Models\PrivilegeClubNotification;
 use App\Models\User;
 use App\Services\PrivilegeClubService;
 use Carbon\Carbon;
@@ -167,10 +168,55 @@ class ClientController extends Controller
 
         $clubService = app(PrivilegeClubService::class);
         $qualifyingStays = $clubService->countQualifyingStays($client);
-        $earnedTier = $clubService->calculateEarnedTier($client);
+        $earnedTier = $clubService->calculateTier($client);
         $tierDefinitions = $clubService->tierDefinitions();
 
-        return view('pages.admin.client-show', compact('client', 'stats', 'clubService', 'qualifyingStays', 'earnedTier', 'tierDefinitions'));
+        $pendingWhatsappNotifications = PrivilegeClubNotification::query()
+            ->where('user_id', $client->id)
+            ->pendingWhatsapp()
+            ->orderByDesc('created_at')
+            ->get();
+
+        $recentWhatsappSentNotifications = PrivilegeClubNotification::query()
+            ->where('user_id', $client->id)
+            ->whereIn('type', [PrivilegeClubNotification::TYPE_TIER_UP, PrivilegeClubNotification::TYPE_TIER_DOWN])
+            ->whereNotNull('whatsapp_sent_at')
+            ->orderByDesc('whatsapp_sent_at')
+            ->limit(5)
+            ->get();
+
+        return view('pages.admin.client-show', compact(
+            'client',
+            'stats',
+            'clubService',
+            'qualifyingStays',
+            'earnedTier',
+            'tierDefinitions',
+            'pendingWhatsappNotifications',
+            'recentWhatsappSentNotifications',
+        ));
+    }
+
+    /**
+     * Tracer l'envoi manuel du message WhatsApp (CDC §3.1 — checklist admin).
+     */
+    public function markPrivilegeClubWhatsappSent(User $client, PrivilegeClubNotification $notification)
+    {
+        if ($client->is_admin) {
+            return back()->with('error', 'Action non applicable aux administrateurs.');
+        }
+
+        if ($notification->user_id !== $client->id) {
+            abort(404);
+        }
+
+        if (! $notification->requiresWhatsappFollowUp()) {
+            return back()->with('error', 'Cette notification ne requiert pas de suivi WhatsApp.');
+        }
+
+        $notification->markWhatsappSent();
+
+        return back()->with('success', 'Message WhatsApp marqué comme envoyé.');
     }
 
     /**
@@ -233,12 +279,12 @@ class ClientController extends Controller
         }
 
         $validated = $request->validate([
-            'privilege_club_tier' => ['nullable', 'in:insider,signature,legend'],
-            'privilege_club_tier_locked' => ['nullable', 'boolean'],
+            'privilege_tier' => ['nullable', 'in:insider,signature,legend'],
+            'privilege_tier_manual_override' => ['nullable', 'boolean'],
         ]);
 
-        $tier = $validated['privilege_club_tier'] ?: null;
-        $lock = $request->boolean('privilege_club_tier_locked', true);
+        $tier = $validated['privilege_tier'] ?: null;
+        $lock = $request->boolean('privilege_tier_manual_override', true);
 
         $clubService->setManualTier($client, $tier, $lock);
 
@@ -255,10 +301,10 @@ class ClientController extends Controller
         }
 
         if ($request->boolean('unlock')) {
-            $client->update(['privilege_club_tier_locked' => false]);
+            $client->update(['privilege_tier_manual_override' => false]);
         }
 
-        $clubService->syncUserTier($client->fresh());
+        $clubService->updateTierIfChanged($client->fresh());
 
         return back()->with('success', 'Palier recalculé selon l\'historique des séjours.');
     }

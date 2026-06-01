@@ -1488,8 +1488,7 @@
             
             let seasonOptions = '<option value="">Sélectionner une saison</option>';
             seasons.forEach(season => {
-                const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-                const period = months[season.start_month - 1] + ' ' + season.start_day + ' - ' + months[season.end_month - 1] + ' ' + season.end_day;
+                const period = season.period || (season.start_date && season.end_date ? `${season.start_date} — ${season.end_date}` : '');
                 seasonOptions += `<option value="${season.id}">${season.name} (${period})</option>`;
             });
 

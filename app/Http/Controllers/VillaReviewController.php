@@ -52,14 +52,12 @@ class VillaReviewController extends Controller
             'comment' => ['required', 'string', 'min:10', 'max:5000'],
         ]);
 
-        VillaReview::create([
-            'villa_id' => $reservation->villa_id,
-            'reservation_id' => $reservation->id,
-            'user_id' => $user->id,
-            'rating' => $validated['rating'],
-            'comment' => $validated['comment'],
-            'status' => VillaReview::STATUS_PENDING,
-        ]);
+        $this->reviewService->createFromReservation(
+            $user,
+            $reservation,
+            (int) $validated['rating'],
+            $validated['comment']
+        );
 
         return redirect()
             ->route('espace-client.reservations')

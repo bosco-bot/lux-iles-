@@ -16,8 +16,8 @@ class VillaGetPriceForDateTest extends TestCase
         $villa = $this->makeVillaWithSeasonalPrices(
             basePrice: 100,
             prices: [
-                ['price' => 300, 'season' => $this->season(1, 1, 12, 31)],
-                ['price' => 500, 'season' => $this->season(6, 1, 8, 31)],
+                ['price' => 300, 'season' => $this->season('2025-01-01', '2025-12-31')],
+                ['price' => 500, 'season' => $this->season('2025-06-01', '2025-08-31')],
             ]
         );
 
@@ -30,7 +30,7 @@ class VillaGetPriceForDateTest extends TestCase
         $villa = $this->makeVillaWithSeasonalPrices(
             basePrice: 150,
             prices: [
-                ['price' => 400, 'season' => $this->season(12, 1, 12, 31)],
+                ['price' => 400, 'season' => $this->season('2025-12-01', '2025-12-31')],
             ]
         );
 
@@ -43,7 +43,7 @@ class VillaGetPriceForDateTest extends TestCase
         $villa = $this->makeVillaWithSeasonalPrices(
             basePrice: 100,
             prices: [
-                ['price' => 275, 'season' => $this->season(4, 1, 5, 15)],
+                ['price' => 275, 'season' => $this->season('2025-04-01', '2025-05-15')],
             ]
         );
 
@@ -56,15 +56,55 @@ class VillaGetPriceForDateTest extends TestCase
         $villa = $this->makeVillaWithSeasonalPrices(
             basePrice: 100,
             prices: [
-                ['price' => 200, 'season' => $this->season(1, 1, 12, 31)],
-                ['price' => 400, 'season' => $this->season(7, 1, 7, 31)],
+                ['price' => 200, 'season' => $this->season('2025-01-01', '2025-12-31')],
+                ['price' => 400, 'season' => $this->season('2025-07-01', '2025-07-31')],
             ]
         );
 
-        // 2 nuits en juillet : 400 + 400 = 800 (pas 200)
         $total = $villa->calculatePriceForPeriod('2025-07-10', '2025-07-12');
 
         $this->assertSame(800.0, $total);
+    }
+
+    #[Test]
+    public function season_does_not_apply_outside_its_calendar_year(): void
+    {
+        $villa = $this->makeVillaWithSeasonalPrices(
+            basePrice: 120,
+            prices: [
+                ['price' => 900, 'season' => $this->season('2025-07-01', '2025-07-31')],
+            ]
+        );
+
+        $this->assertSame(120.0, $villa->getPriceForDate('2026-07-15'));
+    }
+
+    #[Test]
+    public function inactive_season_is_ignored(): void
+    {
+        $villa = $this->makeVillaWithSeasonalPrices(
+            basePrice: 100,
+            prices: [
+                ['price' => 999, 'season' => $this->season('2025-07-01', '2025-07-31', isActive: false)],
+            ]
+        );
+
+        $this->assertSame(100.0, $villa->getPriceForDate('2025-07-15'));
+    }
+
+    #[Test]
+    public function cross_year_season_period_is_supported(): void
+    {
+        $villa = $this->makeVillaWithSeasonalPrices(
+            basePrice: 100,
+            prices: [
+                ['price' => 650, 'season' => $this->season('2025-12-20', '2026-01-05')],
+            ]
+        );
+
+        $this->assertSame(650.0, $villa->getPriceForDate('2025-12-25'));
+        $this->assertSame(650.0, $villa->getPriceForDate('2026-01-02'));
+        $this->assertSame(100.0, $villa->getPriceForDate('2025-12-10'));
     }
 
     private function makeVillaWithSeasonalPrices(float $basePrice, array $prices): Villa
@@ -83,15 +123,13 @@ class VillaGetPriceForDateTest extends TestCase
         return $villa;
     }
 
-    private function season(int $startMonth, int $startDay, int $endMonth, int $endDay): Season
+    private function season(string $startDate, string $endDate, bool $isActive = true): Season
     {
         return new Season([
             'name' => 'Test season',
-            'start_month' => $startMonth,
-            'start_day' => $startDay,
-            'end_month' => $endMonth,
-            'end_day' => $endDay,
-            'is_active' => true,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'is_active' => $isActive,
         ]);
     }
 }

@@ -12,6 +12,6 @@
     </a>
 @elseif($review?->isPending())
     <span class="badge bg-warning bg-opacity-10 text-warning w-100 py-2">Avis en cours de modération</span>
-@elseif($review?->isPublished())
+@elseif($review?->isApproved())
     <span class="badge bg-success bg-opacity-10 text-success w-100 py-2">Avis publié — merci !</span>
 @endif

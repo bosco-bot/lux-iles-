@@ -41,14 +41,14 @@
                         <h2 class="h4 text-lux-dark-blue mb-2">Pas encore membre</h2>
                         <p class="text-lux-greyBlue small mb-0">Votre premier séjour confirmé et réalisé vous ouvrira le niveau INSIDER.</p>
                     @endif
-                    @if($user->privilege_club_tier_locked)
+                    @if($user->privilege_tier_manual_override)
                         <span class="badge bg-secondary bg-opacity-10 text-secondary mt-2">Statut ajusté par l'équipe LUXÎLES</span>
                     @endif
                 </div>
                 <div class="col-md-4 mt-3 mt-md-0 text-md-end">
                     <p class="small text-lux-greyBlue mb-1">Séjours comptabilisés (3 ans glissants)</p>
                     <p class="display-6 font-serif text-lux-gold mb-0">{{ $qualifyingStays }}</p>
-                    @if(!$user->privilege_club_tier_locked && $earnedTier && $earnedTier !== $currentTier)
+                    @if(!$user->privilege_tier_manual_override && $earnedTier && $earnedTier !== $currentTier)
                         <p class="small text-muted mt-2 mb-0">Palier calculé : {{ $tierDefinitions[$earnedTier]['label'] ?? $earnedTier }}</p>
                     @endif
                 </div>

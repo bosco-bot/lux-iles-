@@ -5,9 +5,9 @@ namespace App\Console\Commands;
 use App\Services\PrivilegeClubService;
 use Illuminate\Console\Command;
 
-class PrivilegeClubAnnualMaintenance extends Command
+class PrivilegeAnnualDowngrade extends Command
 {
-    protected $signature = 'privilege-club:annual-maintenance {--year=}';
+    protected $signature = 'privilege:annual-downgrade {--year=}';
 
     protected $description = 'Rétrograde les membres sans réservation l\'année précédente (1er janvier — §3.1 CDC)';
 

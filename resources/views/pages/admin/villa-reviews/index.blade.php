@@ -30,7 +30,7 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {{ $status === 'published' ? 'active' : '' }}" href="{{ route('admin.villa-reviews.index', ['status' => 'published']) }}">Publiés ({{ $counts['published'] }})</a>
+            <a class="nav-link {{ $status === 'approved' ? 'active' : '' }}" href="{{ route('admin.villa-reviews.index', ['status' => 'approved']) }}">Publiés ({{ $counts['approved'] }})</a>
         </li>
         <li class="nav-item">
             <a class="nav-link {{ $status === 'rejected' ? 'active' : '' }}" href="{{ route('admin.villa-reviews.index', ['status' => 'rejected']) }}">Refusés ({{ $counts['rejected'] }})</a>
@@ -45,7 +45,7 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr class="bg-light">
-                        <th class="px-4 py-3 small text-uppercase">Date</th>
+                        <th class="px-4 py-3 small text-uppercase">Déposé le</th>
                         <th class="px-4 py-3 small text-uppercase">Villa</th>
                         <th class="px-4 py-3 small text-uppercase">Voyageur</th>
                         <th class="px-4 py-3 small text-uppercase text-center">Note</th>
@@ -56,7 +56,7 @@
                 <tbody>
                     @forelse($reviews as $review)
                         <tr>
-                            <td class="px-4 py-3 small">{{ $review->created_at->format('d/m/Y') }}</td>
+                            <td class="px-4 py-3 small">{{ ($review->submitted_at ?? $review->created_at)->format('d/m/Y') }}</td>
                             <td class="px-4 py-3 fw-medium text-lux-dark-blue">{{ $review->villa->name ?? '—' }}</td>
                             <td class="px-4 py-3">{{ $review->user->first_name ?? '—' }}</td>
                             <td class="px-4 py-3 text-center">
@@ -65,7 +65,7 @@
                                 @endfor
                             </td>
                             <td class="px-4 py-3">
-                                @if($review->status === 'published')
+                                @if($review->status === 'approved')
                                     <span class="badge bg-success bg-opacity-10 text-success">{{ $review->statusLabel() }}</span>
                                 @elseif($review->status === 'rejected')
                                     <span class="badge bg-danger bg-opacity-10 text-danger">{{ $review->statusLabel() }}</span>

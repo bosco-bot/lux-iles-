@@ -42,7 +42,7 @@ class SettingsController extends Controller
         $policies = CancellationPolicy::orderBy('sort_order')->orderBy('name')->get();
 
         // Récupérer les saisons
-        $seasons = \App\Models\Season::orderBy('name')->get();
+        $seasons = \App\Models\Season::orderBy('start_date')->get();
 
         return view('pages.admin.settings', compact('settings', 'admins', 'roles', 'policies', 'seasons'));
     }

@@ -9,7 +9,7 @@ class VillaReview extends Model
 {
     public const STATUS_PENDING = 'pending';
 
-    public const STATUS_PUBLISHED = 'published';
+    public const STATUS_APPROVED = 'approved';
 
     public const STATUS_REJECTED = 'rejected';
 
@@ -20,6 +20,7 @@ class VillaReview extends Model
         'rating',
         'comment',
         'status',
+        'submitted_at',
         'admin_response',
         'moderated_by',
         'moderated_at',
@@ -28,6 +29,7 @@ class VillaReview extends Model
 
     protected $casts = [
         'rating' => 'integer',
+        'submitted_at' => 'datetime',
         'moderated_at' => 'datetime',
         'published_at' => 'datetime',
     ];
@@ -52,9 +54,9 @@ class VillaReview extends Model
         return $this->belongsTo(User::class, 'moderated_by');
     }
 
-    public function scopePublished($query)
+    public function scopeApproved($query)
     {
-        return $query->where('status', self::STATUS_PUBLISHED);
+        return $query->where('status', self::STATUS_APPROVED);
     }
 
     public function scopePending($query)
@@ -62,9 +64,9 @@ class VillaReview extends Model
         return $query->where('status', self::STATUS_PENDING);
     }
 
-    public function isPublished(): bool
+    public function isApproved(): bool
     {
-        return $this->status === self::STATUS_PUBLISHED;
+        return $this->status === self::STATUS_APPROVED;
     }
 
     public function isPending(): bool
@@ -75,7 +77,7 @@ class VillaReview extends Model
     public function statusLabel(): string
     {
         return match ($this->status) {
-            self::STATUS_PUBLISHED => 'Publié',
+            self::STATUS_APPROVED => 'Publié',
             self::STATUS_REJECTED => 'Refusé',
             default => 'En attente',
         };
