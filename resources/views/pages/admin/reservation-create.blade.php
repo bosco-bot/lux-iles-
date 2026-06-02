@@ -195,6 +195,8 @@
                         Un email de confirmation sera envoyé automatiquement au client à la création.
                     </div>
 
+                    <div id="submit-block-alert" class="alert alert-danger small d-none mb-3" role="alert"></div>
+
                     <button type="submit" class="btn w-100 text-white" style="background-color: var(--lux-dark-blue);">
                         <i class="fa-solid fa-check me-2"></i>Créer la réservation
                     </button>
@@ -218,6 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const totalPriceInput = document.getElementById('total_price');
     const priceBreakdown = document.getElementById('price-breakdown');
     const priceAlert = document.getElementById('price-calc-alert');
+    const submitBlockAlert = document.getElementById('submit-block-alert');
     const villaRulesHint = document.getElementById('villa-rules-hint');
     const availabilityHint = document.getElementById('availability-hint');
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -295,25 +298,53 @@ document.addEventListener('DOMContentLoaded', function () {
         availabilityHint.classList.remove('text-danger');
     }
 
-    function validateSelectedPeriod() {
+    function hideSubmitBlockMessage() {
+        if (submitBlockAlert) {
+            submitBlockAlert.textContent = '';
+            submitBlockAlert.classList.add('d-none');
+        }
+    }
+
+    function showSubmitBlockMessage(message) {
+        hideSubmitBlockMessage();
+        if (submitBlockAlert) {
+            submitBlockAlert.textContent = message;
+            submitBlockAlert.classList.remove('d-none');
+            submitBlockAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function validateSelectedPeriod(updateUi) {
+        if (updateUi === undefined) {
+            updateUi = true;
+        }
         const inDate = checkIn.value;
         const outDate = checkOut.value;
         if (inDate && isDateBlockedString(inDate)) {
-            availabilityHint.textContent = 'La date d\'arrivée sélectionnée n\'est pas disponible.';
-            availabilityHint.classList.add('text-danger');
+            if (updateUi) {
+                availabilityHint.textContent = 'La date d\'arrivée sélectionnée n\'est pas disponible.';
+                availabilityHint.classList.add('text-danger');
+            }
             return false;
         }
         if (outDate && isDateBlockedString(outDate)) {
-            availabilityHint.textContent = 'La date de départ sélectionnée n\'est pas disponible.';
-            availabilityHint.classList.add('text-danger');
+            if (updateUi) {
+                availabilityHint.textContent = 'La date de départ sélectionnée n\'est pas disponible.';
+                availabilityHint.classList.add('text-danger');
+            }
             return false;
         }
         if (inDate && outDate && isPeriodBlocked(inDate, outDate)) {
-            availabilityHint.textContent = 'Cette période chevauche des dates déjà réservées ou bloquées.';
-            availabilityHint.classList.add('text-danger');
+            if (updateUi) {
+                availabilityHint.textContent = 'Cette période chevauche des dates déjà réservées ou bloquées.';
+                availabilityHint.classList.add('text-danger');
+            }
             return false;
         }
-        updateAvailabilityHint();
+        if (updateUi) {
+            updateAvailabilityHint();
+            hideSubmitBlockMessage();
+        }
         return true;
     }
 
@@ -506,14 +537,21 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', function (e) {
         if (!villaSelect.value) {
             e.preventDefault();
-            availabilityHint.textContent = 'Veuillez sélectionner une villa avant de créer la réservation.';
-            availabilityHint.classList.add('text-danger');
+            showSubmitBlockMessage('Veuillez sélectionner une villa avant de créer la réservation.');
             villaSelect.focus();
             return;
         }
-        if (!validateSelectedPeriod()) {
+        if (!checkIn.value || !checkOut.value) {
             e.preventDefault();
+            showSubmitBlockMessage('Veuillez renseigner les dates d\'arrivée et de départ.');
+            return;
         }
+        if (!validateSelectedPeriod(false)) {
+            e.preventDefault();
+            showSubmitBlockMessage('Impossible de créer la réservation : cette période chevauche des dates déjà réservées ou bloquées. Choisissez d\'autres dates.');
+            return;
+        }
+        hideSubmitBlockMessage();
     });
 
     [checkIn, checkOut].forEach(function (el) {

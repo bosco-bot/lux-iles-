@@ -8,6 +8,7 @@ namespace App\Services;
 final class VillaAvailabilityContext
 {
     public const PUBLIC_BLOCKING_STATUSES = [
+        'pending',
         'confirmed',
         'deposit_paid',
         'fully_paid',

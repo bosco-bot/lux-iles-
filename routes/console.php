@@ -28,3 +28,8 @@ Schedule::command('privilege:annual-downgrade')
     ->yearlyOn(1, 1, '00:15')
     ->timezone('Europe/Paris')
     ->description('Rétrogradation Privilege Club — maintenance annuelle');
+
+Schedule::command('reservations:expire-unpaid-pending')
+    ->hourly()
+    ->timezone('Europe/Paris')
+    ->description('Annuler les réservations en ligne sans acompte après 24 h');

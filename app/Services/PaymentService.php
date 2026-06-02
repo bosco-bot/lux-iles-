@@ -214,7 +214,10 @@ class PaymentService
             // Si c'est l'acompte, passer la réservation à "deposit_paid"
             // Accepter 'pending' (statut initial) ou 'confirmed' (si confirmée manuellement)
             if (in_array($reservation->status, ['pending', 'confirmed'])) {
-                $reservation->update(['status' => 'deposit_paid']);
+                $reservation->update([
+                    'status' => 'deposit_paid',
+                    'payment_expires_at' => null,
+                ]);
             }
 
             // Générer le reçu d'acompte

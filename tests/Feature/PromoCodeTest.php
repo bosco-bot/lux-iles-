@@ -251,6 +251,7 @@ class PromoCodeTest extends TestCase
             $table->decimal('balance_amount', 10, 2)->default(0);
             $table->decimal('deposit_guarantee', 10, 2)->nullable();
             $table->string('status')->default('pending');
+            $table->timestamp('payment_expires_at')->nullable();
             $table->string('source')->default('direct');
             $table->text('special_requests')->nullable();
             $table->foreignId('created_by')->nullable();

@@ -370,6 +370,7 @@ class BookingController extends Controller
                 'deposit_amount' => $depositAmount,
                 'balance_amount' => $balanceAmount,
                 'status' => 'pending', // Statut initial : en attente de paiement
+                'payment_expires_at' => now()->addHours((int) config('booking.unpaid_deposit_grace_hours', 24)),
                 'source' => 'direct',
                 'special_requests' => $validated['special_requests'] ?? null,
                 'created_by' => $user->id,

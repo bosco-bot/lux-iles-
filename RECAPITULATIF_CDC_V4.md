@@ -34,8 +34,9 @@ Suivi des travaux après tag `v4.0.1` — hors périmètre CDC initial mais néc
 | Liens notifications admin (404) | ✅ | `resolveNotificationUrl()` + URLs relatives |
 | Envoi code promo admin (email / WhatsApp) | ✅ | Fiche client + templates |
 | Affichage remise promo (client + admin) | ✅ | Composant `reservation-promo-discount`, fiche `/admin/reservations/{id}` |
+| Règle 24 h — acompte en ligne | ✅ | `pending` bloque le calendrier public ; expiration auto via `reservations:expire-unpaid-pending` |
 | Messagerie — bloc « Réservation active » | ✅ | Correction `text-white` → `text-lux-blue` |
-| Recette §3.11 dates admin | ✅ | Villa obligatoire avant activation des champs date |
+| Recette §3.11 dates admin | ✅ | Villa obligatoire, calendrier, conflits grisés, création manuelle Domaine du Lagon |
 
 ### Disponibilité — architecture (A + B + C)
 
@@ -44,8 +45,10 @@ Suivi des travaux après tag `v4.0.1` — hors périmètre CDC initial mais néc
 
 | Contexte | Réservations comptées | Blocages calendrier |
 |----------|----------------------|---------------------|
-| `publicSite()` | Confirmées / payées / terminées, séjours futurs | ✅ Toujours |
+| `publicSite()` | Confirmées / payées / terminées + `pending` (24 h max), séjours futurs | ✅ Toujours |
 | `admin()` | + `pending`, toutes dates | ✅ Toujours |
+
+**Règle acompte en ligne (24 h) :** à la confirmation d’une réservation `direct`, `payment_expires_at = now() + 24 h`. Tant que le statut reste `pending`, les dates sont bloquées côté public et admin. Si l’acompte n’est pas payé à temps, la commande planifiée `reservations:expire-unpaid-pending` (horaire) annule la réservation, libère le calendrier et envoie l’email d’annulation. Les réservations manuelles admin (`source = manual`) ne sont pas concernées.
 
 | Parcours | Fichiers | Rôle |
 |--------|----------|------|
@@ -65,8 +68,9 @@ Suivi des travaux après tag `v4.0.1` — hors périmètre CDC initial mais néc
 
 | Filtre | Résultat |
 |--------|----------|
-| `php artisan test` (global) | **61 passés** (juin 2026) |
+| `php artisan test` (global) | **64 passés** (juin 2026) |
 | `VillaAvailabilityServiceTest` | 4/4 |
+| `ExpireUnpaidPendingReservationsTest` | 3/3 |
 | `ManualReservationPaymentSyncTest` | 5/5 |
 | `ManualReservationClientPaymentTest` | 4/4 |
 | `PromoCodeTest` | 3/3 |
@@ -85,11 +89,14 @@ php artisan test --filter=ManualReservation
 ```
 app/Services/VillaAvailabilityService.php
 app/Services/VillaAvailabilityContext.php
+app/Console/Commands/ExpireUnpaidPendingReservations.php
+config/booking.php
 app/Http/Controllers/ClientNotificationController.php
 app/Services/WhatsAppClickToChatService.php
 resources/views/emails/promo-code.blade.php
 resources/views/components/reservation-offline-payment-notice.blade.php
 resources/views/components/reservation-promo-discount.blade.php
+tests/Feature/ExpireUnpaidPendingReservationsTest.php
 tests/Unit/VillaAvailabilityServiceTest.php
 tests/Feature/ManualReservationPaymentSyncTest.php
 tests/Feature/ManualReservationClientPaymentTest.php
@@ -101,11 +108,11 @@ tests/Feature/ManualReservationClientPaymentTest.php
 
 | §CDC | Sujet | Statut |
 |------|--------|--------|
-| §3.1 | Privilege Club (email palier, WhatsApp checklist) | ⏳ Tier simulé (`signature`) — checklist admin à valider |
+| §3.1 | Privilege Club (email palier, WhatsApp checklist) | ✅ Recette OK (tier simulé, checklist admin validée) |
 | §3.2 | Code promo en réservation en ligne | ✅ Recette OK (résa `LX-OMI255-2026`, code `GP2040`) |
-| §3.3 | Chevauchement saisons → tarif max | ⏳ À valider |
-| §3.8 | Page `/admin/traffic` | ⏳ À valider |
-| §3.11 | Création / édition réservation manuelle avec calendrier | ⏳ À valider |
+| §3.3 | Chevauchement saisons → tarif max | ✅ Recette OK (Domaine du Lagon V-002 : juin 400 €/nuit → 1 600 €, juillet max 700 €/nuit → 2 800 €) |
+| §3.8 | Page `/admin/traffic` | ✅ Recette OK (visiteurs, pages vues, graphique, top pages, sources) |
+| §3.11 | Création / édition réservation manuelle avec calendrier | ✅ Recette OK (11→18 juin, calendrier conflits, client sans Stripe, acompte 30 % affiché) |
 
 ---
 

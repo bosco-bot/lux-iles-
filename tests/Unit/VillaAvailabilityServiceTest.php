@@ -112,7 +112,7 @@ class VillaAvailabilityServiceTest extends TestCase
     }
 
     #[Test]
-    public function public_context_excludes_pending_reservations_from_blocked_dates(): void
+    public function public_context_includes_pending_reservations_in_blocked_dates(): void
     {
         Reservation::create([
             'reservation_number' => 'LX-PENDING-2026',
@@ -135,7 +135,7 @@ class VillaAvailabilityServiceTest extends TestCase
         $publicBlocked = $this->service->getBlockedDates($this->villaId, null, VillaAvailabilityContext::publicSite());
 
         $this->assertContains('2026-10-01', $adminBlocked);
-        $this->assertNotContains('2026-10-01', $publicBlocked);
+        $this->assertContains('2026-10-01', $publicBlocked);
     }
 
     #[Test]
