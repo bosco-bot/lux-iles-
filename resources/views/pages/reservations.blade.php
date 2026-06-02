@@ -148,7 +148,10 @@
                             </div>
                             <div class="d-flex align-items-center justify-content-between mb-4 small">
                                 <span class="text-lux-gray"><i class="fa-solid fa-user-group text-lux-gold me-2"></i>{{ $reservation->number_of_guests }} Voyageur{{ $reservation->number_of_guests > 1 ? 's' : '' }}</span>
-                                <span class="{{ $reservation->status === 'cancelled' ? 'text-muted text-decoration-line-through' : 'text-lux-dark-blue' }} fw-semibold">{{ number_format($reservation->total_price, 0, ',', ' ') }} €</span>
+                                <div class="text-end">
+                                    <x-reservation-promo-discount :reservation="$reservation" class="small text-success mb-1" />
+                                    <span class="{{ $reservation->status === 'cancelled' ? 'text-muted text-decoration-line-through' : 'text-lux-dark-blue' }} fw-semibold d-block">{{ number_format($reservation->total_price, 0, ',', ' ') }} €</span>
+                                </div>
                             </div>
                             @if($reservation->status === 'cancelled')
                                 <a href="{{ route('villas.show', $reservation->villa_id) }}" class="btn btn-link w-100 text-lux-gold py-2 rounded small fw-medium text-decoration-none" style="transition: color 0.3s;" onmouseover="this.style.color='var(--lux-light-gold)'" onmouseout="this.style.color='var(--lux-gold)'">
@@ -291,7 +294,10 @@
                                         <td class="p-4">
                                             <span class="badge bg-{{ $badge['bg'] }} bg-opacity-10 text-{{ $badge['bg'] }} px-3 py-1 rounded-pill small border border-{{ $badge['bg'] }} border-opacity-25">{{ $badge['text'] }}</span>
                                         </td>
-                                        <td class="p-4 text-end fw-medium {{ $reservation->status === 'cancelled' ? 'text-muted text-decoration-line-through' : 'text-lux-dark-blue' }}">{{ number_format($reservation->total_price, 0, ',', ' ') }} €</td>
+                                        <td class="p-4 text-end">
+                                            <x-reservation-promo-discount :reservation="$reservation" class="small text-success mb-1" />
+                                            <span class="fw-medium d-block {{ $reservation->status === 'cancelled' ? 'text-muted text-decoration-line-through' : 'text-lux-dark-blue' }}">{{ number_format($reservation->total_price, 0, ',', ' ') }} €</span>
+                                        </td>
                                         <td class="p-4 text-end">
                                             @if($reservation->status === 'cancelled')
                                                 <a href="{{ route('villas.show', $reservation->villa_id) }}" class="btn btn-link text-lux-gold p-0 border-0 text-decoration-none small fw-medium" style="transition: color 0.3s;" onmouseover="this.style.color='var(--lux-light-gold)'" onmouseout="this.style.color='var(--lux-gold)'"><i class="fa-solid fa-rotate-right me-1"></i> Réserver</a>
@@ -405,11 +411,7 @@
                                         </div>
                                     </div>
                                     <div class="text-end flex-shrink-0">
-                                        @if($reservation->discount_amount > 0 && $reservation->promoCode)
-                                            <p class="small text-success mb-1">
-                                                Réduction ({{ $reservation->promoCode->code }}) : -{{ number_format($reservation->discount_amount, 2, ',', ' ') }} €
-                                            </p>
-                                        @endif
+                                        <x-reservation-promo-discount :reservation="$reservation" class="small text-success mb-1" />
                                         <p class="h4 fw-semibold {{ $reservation->status === 'cancelled' ? 'text-muted text-decoration-line-through' : 'text-lux-dark-blue' }} mb-2">{{ number_format($reservation->total_price, 0, ',', ' ') }} €</p>
                                         @if($reservation->status === 'cancelled')
                                             <a href="{{ route('villas.show', $reservation->villa_id) }}" class="btn btn-link btn-sm px-4 py-2 rounded small fw-medium text-lux-gold text-decoration-none" style="transition: color 0.3s;" onmouseover="this.style.color='var(--lux-light-gold)'" onmouseout="this.style.color='var(--lux-gold)'">

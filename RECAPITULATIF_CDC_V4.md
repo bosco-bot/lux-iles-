@@ -33,6 +33,7 @@ Suivi des travaux après tag `v4.0.1` — hors périmètre CDC initial mais néc
 | Cloche notifications espace client | ✅ | `ClientNotificationController` + dropdown dashboard |
 | Liens notifications admin (404) | ✅ | `resolveNotificationUrl()` + URLs relatives |
 | Envoi code promo admin (email / WhatsApp) | ✅ | Fiche client + templates |
+| Affichage remise promo (client + admin) | ✅ | Composant `reservation-promo-discount`, fiche `/admin/reservations/{id}` |
 | Messagerie — bloc « Réservation active » | ✅ | Correction `text-white` → `text-lux-blue` |
 | Recette §3.11 dates admin | ✅ | Villa obligatoire avant activation des champs date |
 
@@ -64,12 +65,12 @@ Suivi des travaux après tag `v4.0.1` — hors périmètre CDC initial mais néc
 
 | Filtre | Résultat |
 |--------|----------|
-| `php artisan test` (global) | 59 passés, 2 échecs* (juin 2026) |
+| `php artisan test` (global) | **61 passés** (juin 2026) |
 | `VillaAvailabilityServiceTest` | 4/4 |
 | `ManualReservationPaymentSyncTest` | 5/5 |
 | `ManualReservationClientPaymentTest` | 4/4 |
-
-\* Échecs connus hors disponibilité : `PrivilegeClubWhatsappChecklistTest`, `PromoCodeTest` (à corriger avant tag `v4.0.2`).
+| `PromoCodeTest` | 3/3 |
+| `PrivilegeClubWhatsappChecklistTest` | 3/3 |
 
 ```bash
 php artisan test
@@ -88,6 +89,7 @@ app/Http/Controllers/ClientNotificationController.php
 app/Services/WhatsAppClickToChatService.php
 resources/views/emails/promo-code.blade.php
 resources/views/components/reservation-offline-payment-notice.blade.php
+resources/views/components/reservation-promo-discount.blade.php
 tests/Unit/VillaAvailabilityServiceTest.php
 tests/Feature/ManualReservationPaymentSyncTest.php
 tests/Feature/ManualReservationClientPaymentTest.php
@@ -95,15 +97,15 @@ tests/Feature/ManualReservationClientPaymentTest.php
 
 ---
 
-## Recette CDC — points encore à valider manuellement
+## Recette CDC — suivi manuel (juin 2026)
 
-| §CDC | Sujet |
-|------|--------|
-| §3.1 | Privilege Club bout en bout (email palier, WhatsApp checklist) |
-| §3.2 | Code promo appliqué en réservation en ligne |
-| §3.3 | Chevauchement saisons → tarif max |
-| §3.8 | Page `/admin/traffic` |
-| §3.11 | Création / édition réservation manuelle avec calendrier |
+| §CDC | Sujet | Statut |
+|------|--------|--------|
+| §3.1 | Privilege Club (email palier, WhatsApp checklist) | ⏳ Tier simulé (`signature`) — checklist admin à valider |
+| §3.2 | Code promo en réservation en ligne | ✅ Recette OK (résa `LX-OMI255-2026`, code `GP2040`) |
+| §3.3 | Chevauchement saisons → tarif max | ⏳ À valider |
+| §3.8 | Page `/admin/traffic` | ⏳ À valider |
+| §3.11 | Création / édition réservation manuelle avec calendrier | ⏳ À valider |
 
 ---
 
@@ -124,4 +126,4 @@ tests/Feature/ManualReservationClientPaymentTest.php
 |-----|-------------|
 | `v4.0.0` | CDC LUXÎLES v4.0 — livraison complète |
 | `v4.0.1` | Conformité recette (§3.1, §3.4, §3.6/§3.7) |
-| `v4.0.2` | *Prévu* — disponibilité unifiée (A+B+C), notifications client, correctifs recette |
+| `v4.0.2` | *Prévu* — dispo unifiée (A+B+C), notifications client, affichage promo, correctifs recette |

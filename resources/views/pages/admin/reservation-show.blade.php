@@ -98,6 +98,11 @@
                     </div>
                     <div class="col-md-6">
                         <label class="small text-lux-greyBlue text-uppercase fw-medium">Montant total</label>
+                        @if($reservation->discount_amount > 0 && $reservation->promoCode)
+                            <div class="small text-success mb-1">
+                                Réduction ({{ $reservation->promoCode->code }}) : -{{ number_format($reservation->discount_amount, 2, ',', ' ') }} €
+                            </div>
+                        @endif
                         <div class="fw-medium text-lux-dark-blue fs-5">{{ number_format($reservation->total_price, 2, ',', ' ') }} €</div>
                     </div>
                 </div>
@@ -177,6 +182,12 @@
                         <span class="text-lux-greyBlue">Taxe de séjour</span>
                         <span class="fw-medium">{{ number_format($reservation->tourist_tax, 2, ',', ' ') }} €</span>
                     </div>
+                    @if($reservation->discount_amount > 0 && $reservation->promoCode)
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-success">Réduction ({{ $reservation->promoCode->code }})</span>
+                        <span class="fw-medium text-success">-{{ number_format($reservation->discount_amount, 2, ',', ' ') }} €</span>
+                    </div>
+                    @endif
                     <hr>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="fw-medium text-lux-dark-blue">Total</span>

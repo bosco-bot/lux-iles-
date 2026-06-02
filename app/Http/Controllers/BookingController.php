@@ -548,7 +548,7 @@ class BookingController extends Controller
         
         // Récupérer la réservation avec toutes ses relations
         $reservation = Reservation::where('reservation_number', $reservationNumber)
-            ->with(['villa.island', 'villa.photos', 'user', 'payments', 'documents'])
+            ->with(['villa.island', 'villa.photos', 'user', 'payments', 'documents', 'promoCode'])
             ->first();
         
         if (!$reservation) {

@@ -198,6 +198,9 @@
                     </div>
                     <div class="col-6">
                         <p class="small text-lux-greyBlue text-uppercase mb-2" style="letter-spacing: 0.1em;">Total</p>
+                        @if($reservation->discount_amount > 0 && $reservation->promoCode)
+                            <p class="small text-success mb-1">Réduction ({{ $reservation->promoCode->code }}) : -{{ number_format($reservation->discount_amount, 2, ',', ' ') }} €</p>
+                        @endif
                         <p class="h5 text-lux-dark-blue fw-medium mb-0">{{ number_format($total, 0, ',', ' ') }} €</p>
                     </div>
                 </div>

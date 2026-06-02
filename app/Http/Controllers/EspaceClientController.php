@@ -839,7 +839,7 @@ class EspaceClientController extends Controller
         }
         
         // Charger les relations nécessaires
-        $reservation->load(['villa.island', 'villa.photos', 'payments', 'documents']);
+        $reservation->load(['villa.island', 'villa.photos', 'payments', 'documents', 'promoCode']);
         $villa = $reservation->villa;
         
         // Récupérer la photo principale

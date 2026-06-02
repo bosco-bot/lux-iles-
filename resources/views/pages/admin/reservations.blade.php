@@ -438,6 +438,12 @@
                                     <span class="small text-lux-greyBlue">Taxe séjour</span>
                                     <span class="small fw-medium">{{ number_format($selectedReservation->tourist_tax, 2, ',', ' ') }} €</span>
                                 </div>
+                                @if($selectedReservation->discount_amount > 0 && $selectedReservation->promoCode)
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="small text-success">Réduction ({{ $selectedReservation->promoCode->code }})</span>
+                                    <span class="small fw-medium text-success">-{{ number_format($selectedReservation->discount_amount, 2, ',', ' ') }} €</span>
+                                </div>
+                                @endif
                                 <div class="d-flex justify-content-between pt-3 border-top">
                                     <span class="fw-medium text-lux-dark-blue">Total</span>
                                     <span class="fs-5 fw-semibold text-lux-gold">{{ number_format($selectedReservation->total_price, 2, ',', ' ') }} €</span>

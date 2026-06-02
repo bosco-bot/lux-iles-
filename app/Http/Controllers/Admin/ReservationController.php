@@ -32,7 +32,7 @@ class ReservationController extends Controller
   public function index(Request $request)
   {
     try {
-      $query = Reservation::with(['villa.island', 'user', 'payments']);
+      $query = Reservation::with(['villa.island', 'user', 'payments', 'promoCode']);
 
       if ($request->filled('status')) {
         $query->where('status', $request->status);
@@ -392,7 +392,7 @@ class ReservationController extends Controller
    */
   public function show($id)
   {
-    $reservation = Reservation::with(['villa.island', 'user', 'payments', 'guests', 'documents'])
+    $reservation = Reservation::with(['villa.island', 'user', 'payments', 'guests', 'documents', 'promoCode'])
       ->findOrFail($id);
 
     return view('pages.admin.reservation-show', compact('reservation'));

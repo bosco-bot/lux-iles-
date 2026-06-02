@@ -164,6 +164,12 @@
                             </div>
 
                             <div class="mt-4 pt-4 border-top">
+                                @if($reservation->discount_amount > 0 && $reservation->promoCode)
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="text-success small fw-medium">Réduction ({{ $reservation->promoCode->code }})</span>
+                                    <span class="text-success small fw-medium">-{{ number_format($reservation->discount_amount, 2, ',', ' ') }} €</span>
+                                </div>
+                                @endif
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="text-lux-greyBlue small">Total du séjour</span>
                                     <span class="text-lux-greyBlue small">{{ number_format($total, 2, ',', ' ') }} €</span>
