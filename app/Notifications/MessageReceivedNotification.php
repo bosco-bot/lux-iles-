@@ -70,7 +70,7 @@ class MessageReceivedNotification extends Notification
             'reservation_id' => $reservation->id ?? null,
             'reservation_number' => $reservation->reservation_number ?? null,
             'body_preview' => strlen($this->message->body) > 100 ? substr($this->message->body, 0, 100) . '...' : $this->message->body,
-            'url' => route('admin.messages', ['conversation_id' => $reservation ? 'reservation_' . $reservation->id : 'user_' . $sender->id]),
+            'url' => route('admin.messages', ['conversation_id' => $reservation ? 'reservation_' . $reservation->id : 'user_' . $sender->id], false),
             'icon' => 'fa-envelope',
             'color' => 'info',
         ];

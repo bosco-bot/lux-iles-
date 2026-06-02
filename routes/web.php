@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\TrafficStatsController;
 use App\Http\Controllers\Admin\VillaReviewController as AdminVillaReviewController;
 use App\Http\Controllers\VillaReviewController;
 use App\Http\Controllers\PrivilegeClubController;
+use App\Http\Controllers\ClientNotificationController;
 
 // Page d'accueil
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -99,6 +100,13 @@ Route::prefix('espace-client')->name('espace-client.')->middleware('auth')->grou
     
     Route::get('/messages', [EspaceClientController::class, 'messages'])->name('messages');
     Route::post('/messages/send', [EspaceClientController::class, 'sendMessage'])->name('messages.send');
+
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [ClientNotificationController::class, 'index'])->name('index');
+        Route::get('/unread-count', [ClientNotificationController::class, 'unreadCount'])->name('unread-count');
+        Route::post('/{id}/mark-as-read', [ClientNotificationController::class, 'markAsRead'])->name('mark-as-read');
+        Route::post('/mark-all-as-read', [ClientNotificationController::class, 'markAllAsRead'])->name('mark-all-as-read');
+    });
     
     // Documents
     Route::prefix('documents')->name('documents.')->group(function () {
@@ -195,6 +203,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/villas', [AdminVillaController::class, 'index'])->name('villas');
         Route::get('/villas/create', [AdminVillaController::class, 'create'])->name('villas.create');
         Route::post('/villas', [AdminVillaController::class, 'store'])->name('villas.store');
+        Route::get('/villas/{id}/blocked-dates', [AdminVillaController::class, 'blockedDates'])->name('villas.blocked-dates');
         Route::get('/villas/{id}/edit', [AdminVillaController::class, 'edit'])->name('villas.edit');
         Route::put('/villas/{id}', [AdminVillaController::class, 'update'])->name('villas.update');
         Route::delete('/villas/{id}', [AdminVillaController::class, 'destroy'])->name('villas.destroy');
@@ -278,9 +287,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/clients/{client}/documents/{document}/download', [\App\Http\Controllers\Admin\ClientDocumentController::class, 'download'])->name('clients.documents.download');
         Route::get('/clients/{client}', [AdminClientController::class, 'show'])->name('clients.show');
         Route::post('/clients/{client}/resend-invitation', [AdminClientController::class, 'resendInvitation'])->name('clients.resend-invitation');
+        Route::post('/clients/{client}/send-promo-code', [AdminClientController::class, 'sendPromoCode'])->name('clients.send-promo-code');
+        Route::post('/clients/{client}/open-promo-code-whatsapp', [AdminClientController::class, 'openPromoCodeWhatsapp'])->name('clients.open-promo-code-whatsapp');
         Route::post('/clients/{client}/toggle-status', [AdminClientController::class, 'toggleStatus'])->name('clients.toggle-status');
         Route::put('/clients/{client}/privilege-club', [AdminClientController::class, 'updatePrivilegeClub'])->name('clients.privilege-club.update');
         Route::post('/clients/{client}/privilege-club/recalculate', [AdminClientController::class, 'recalculatePrivilegeClub'])->name('clients.privilege-club.recalculate');
+        Route::get('/clients/{client}/privilege-club/notifications/{notification}/whatsapp-open', [AdminClientController::class, 'openPrivilegeClubWhatsapp'])->name('clients.privilege-club.whatsapp-open');
         Route::post('/clients/{client}/privilege-club/notifications/{notification}/whatsapp-sent', [AdminClientController::class, 'markPrivilegeClubWhatsappSent'])->name('clients.privilege-club.whatsapp-sent');
 
         // Routes Synchronisation

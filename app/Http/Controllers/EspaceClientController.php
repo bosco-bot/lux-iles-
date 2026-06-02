@@ -755,10 +755,9 @@ class EspaceClientController extends Controller
     public function payBalance(Request $request, Reservation $reservation)
     {
         $user = Auth::user();
-        
-        // Vérifier que la réservation appartient à l'utilisateur
-        if ($reservation->user_id !== $user->id) {
-            return redirect()->route('espace-client.index')->with('error', 'Vous n\'avez pas accès à cette réservation.');
+
+        if ($redirect = $this->redirectIfOnlinePaymentNotAllowed($reservation, $user)) {
+            return $redirect;
         }
         
         $balancePayment = $reservation->payments()
@@ -825,10 +824,9 @@ class EspaceClientController extends Controller
     public function payDeposit(Request $request, Reservation $reservation)
     {
         $user = Auth::user();
-        
-        // Vérifier que la réservation appartient à l'utilisateur
-        if ($reservation->user_id !== $user->id) {
-            return redirect()->route('espace-client.index')->with('error', 'Vous n\'avez pas accès à cette réservation.');
+
+        if ($redirect = $this->redirectIfOnlinePaymentNotAllowed($reservation, $user)) {
+            return $redirect;
         }
         
         $depositPayment = $reservation->payments()
@@ -880,10 +878,9 @@ class EspaceClientController extends Controller
     public function payDepositGuarantee(Request $request, Reservation $reservation)
     {
         $user = Auth::user();
-        
-        // Vérifier que la réservation appartient à l'utilisateur
-        if ($reservation->user_id !== $user->id) {
-            return redirect()->route('espace-client.index')->with('error', 'Vous n\'avez pas accès à cette réservation.');
+
+        if ($redirect = $this->redirectIfOnlinePaymentNotAllowed($reservation, $user)) {
+            return $redirect;
         }
         
         $guaranteePayment = $reservation->payments()
@@ -927,6 +924,25 @@ class EspaceClientController extends Controller
             'dueDate',
             'stripePublicKey'
         ));
+    }
+
+    /**
+     * Bloque l'accès aux pages Stripe pour les réservations manuelles hors ligne (§3.11).
+     */
+    protected function redirectIfOnlinePaymentNotAllowed(Reservation $reservation, $user)
+    {
+        if ($reservation->user_id !== $user->id) {
+            return redirect()->route('espace-client.index')->with('error', 'Vous n\'avez pas accès à cette réservation.');
+        }
+
+        if (! $reservation->allowsClientOnlinePayment()) {
+            return redirect()->route('espace-client.reservations')->with(
+                'error',
+                'Le règlement de cette réservation est géré hors ligne par l\'équipe LUXÎLES. Contactez-nous si besoin.'
+            );
+        }
+
+        return null;
     }
 }
 

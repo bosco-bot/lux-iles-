@@ -162,34 +162,45 @@
                                     </a>
                                 </div>
                             @else
-                                @if($reservation->status === 'deposit_paid')
-                                    @php
-                                        $pendingBalance = $reservation->payments()->where('type', 'balance')->whereIn('status', ['pending', 'processing'])->first();
-                                        $pendingGuarantee = $reservation->payments()->where('type', 'deposit_guarantee')->whereIn('status', ['pending', 'processing'])->first();
-                                    @endphp
-                                    
-                                    <div class="d-flex flex-column gap-2">
-                                        @if($pendingBalance)
-                                            <a href="{{ route('espace-client.pay-balance', $reservation) }}" class="btn btn-lux-primary w-100 py-2 rounded small fw-medium text-decoration-none">
-                                                Régler le solde
-                                            </a>
-                                        @endif
-                                        
-                                        @if($pendingGuarantee)
-                                            <a href="{{ route('espace-client.pay-deposit-guarantee', $reservation) }}" class="btn btn-lux-secondary w-100 py-2 rounded small fw-medium text-decoration-none">
-                                                Régler ma caution
-                                            </a>
-                                        @endif
+                                @if($reservation->allowsClientOnlinePayment())
+                                    @if($reservation->status === 'deposit_paid')
+                                        @php
+                                            $pendingBalance = $reservation->payments()->where('type', 'balance')->whereIn('status', ['pending', 'processing'])->first();
+                                            $pendingGuarantee = $reservation->payments()->where('type', 'deposit_guarantee')->whereIn('status', ['pending', 'processing'])->first();
+                                        @endphp
 
-                                        <a href="{{ route('espace-client.index', $reservation) }}" class="btn btn-link w-100 text-lux-gray py-1 small text-decoration-none">
-                                            Voir détails
-                                        </a>
-                                    </div>
+                                        <div class="d-flex flex-column gap-2">
+                                            @if($pendingBalance)
+                                                <a href="{{ route('espace-client.pay-balance', $reservation) }}" class="btn btn-lux-primary w-100 py-2 rounded small fw-medium text-decoration-none">
+                                                    Régler le solde
+                                                </a>
+                                            @endif
+
+                                            @if($pendingGuarantee)
+                                                <a href="{{ route('espace-client.pay-deposit-guarantee', $reservation) }}" class="btn btn-lux-secondary w-100 py-2 rounded small fw-medium text-decoration-none">
+                                                    Régler ma caution
+                                                </a>
+                                            @endif
+
+                                            <a href="{{ route('espace-client.index', $reservation) }}" class="btn btn-link w-100 text-lux-gray py-1 small text-decoration-none">
+                                                Voir détails
+                                            </a>
+                                        </div>
+                                    @else
+                                        <div class="d-flex flex-column gap-2">
+                                            <a href="{{ route('espace-client.pay-deposit', $reservation) }}" class="btn btn-lux-secondary w-100 py-2 rounded small fw-medium text-decoration-none">
+                                                Régler l'acompte
+                                            </a>
+                                            <a href="{{ route('espace-client.index', $reservation) }}" class="btn btn-link w-100 text-lux-gray py-1 small text-decoration-none">
+                                                Voir détails
+                                            </a>
+                                        </div>
+                                    @endif
                                 @else
                                     <div class="d-flex flex-column gap-2">
-                                        <a href="{{ route('espace-client.pay-deposit', $reservation) }}" class="btn btn-lux-secondary w-100 py-2 rounded small fw-medium text-decoration-none">
-                                            Régler l'acompte
-                                        </a>
+                                        @if($reservation->hasPendingClientPayments())
+                                            <x-reservation-offline-payment-notice class="text-center py-2" />
+                                        @endif
                                         <a href="{{ route('espace-client.index', $reservation) }}" class="btn btn-link w-100 text-lux-gray py-1 small text-decoration-none">
                                             Voir détails
                                         </a>
@@ -292,25 +303,32 @@
                                                     <a href="{{ route('espace-client.documents') }}" class="btn btn-link text-lux-gray p-0 border-0 text-decoration-none small fw-medium" style="transition: color 0.3s;" onmouseover="this.style.color='var(--lux-dark-blue)'" onmouseout="this.style.color='var(--lux-gray)'">Facture <i class="fa-solid fa-download ms-1"></i></a>
                                                 </div>
                                             @else
-                                                @if($reservation->status === 'deposit_paid')
-                                                    @php
-                                                        $pendingBalance = $reservation->payments()->where('type', 'balance')->whereIn('status', ['pending', 'processing'])->first();
-                                                        $pendingGuarantee = $reservation->payments()->where('type', 'deposit_guarantee')->whereIn('status', ['pending', 'processing'])->first();
-                                                    @endphp
-                                                    <div class="d-flex flex-column align-items-end gap-1">
-                                                        @if($pendingBalance)
-                                                            <a href="{{ route('espace-client.pay-balance', $reservation) }}" class="text-lux-gold text-decoration-none small fw-medium">Régler Solde</a>
-                                                        @endif
-                                                        @if($pendingGuarantee)
-                                                            <a href="{{ route('espace-client.pay-deposit-guarantee', $reservation) }}" class="text-lux-gold text-decoration-none small fw-medium">Régler Caution</a>
-                                                        @endif
-                                                @elseif($reservation->status === 'pending')
-                                                    <div class="d-flex flex-column align-items-end gap-1">
-                                                        <a href="{{ route('espace-client.pay-deposit', $reservation) }}" class="btn btn-lux-secondary btn-sm px-3 py-1 rounded small fw-medium text-decoration-none">Régler l'acompte</a>
-                                                        <a href="{{ route('espace-client.index', $reservation) }}" class="text-lux-gray text-decoration-none small opacity-75">Détails</a>
-                                                    </div>
+                                                @if($reservation->allowsClientOnlinePayment())
+                                                    @if($reservation->status === 'deposit_paid')
+                                                        @php
+                                                            $pendingBalance = $reservation->payments()->where('type', 'balance')->whereIn('status', ['pending', 'processing'])->first();
+                                                            $pendingGuarantee = $reservation->payments()->where('type', 'deposit_guarantee')->whereIn('status', ['pending', 'processing'])->first();
+                                                        @endphp
+                                                        <div class="d-flex flex-column align-items-end gap-1">
+                                                            @if($pendingBalance)
+                                                                <a href="{{ route('espace-client.pay-balance', $reservation) }}" class="text-lux-gold text-decoration-none small fw-medium">Régler Solde</a>
+                                                            @endif
+                                                            @if($pendingGuarantee)
+                                                                <a href="{{ route('espace-client.pay-deposit-guarantee', $reservation) }}" class="text-lux-gold text-decoration-none small fw-medium">Régler Caution</a>
+                                                            @endif
+                                                        </div>
+                                                    @elseif($reservation->status === 'pending')
+                                                        <div class="d-flex flex-column align-items-end gap-1">
+                                                            <a href="{{ route('espace-client.pay-deposit', $reservation) }}" class="btn btn-lux-secondary btn-sm px-3 py-1 rounded small fw-medium text-decoration-none">Régler l'acompte</a>
+                                                            <a href="{{ route('espace-client.index', $reservation) }}" class="text-lux-gray text-decoration-none small opacity-75">Détails</a>
+                                                        </div>
+                                                    @else
+                                                        <a href="{{ route('espace-client.index', $reservation) }}" class="btn btn-link text-lux-gold p-0 border-0 text-decoration-none small fw-medium" style="transition: color 0.3s; border-bottom: 1px solid transparent !important;" onmouseover="this.style.color='var(--lux-light-gold)'; this.style.borderBottomColor='var(--lux-light-gold)'" onmouseout="this.style.color='var(--lux-gold)'; this.style.borderBottomColor='transparent'">Voir détails</a>
+                                                    @endif
+                                                @elseif($reservation->hasPendingClientPayments())
+                                                    <x-reservation-offline-payment-notice class="text-end" />
                                                 @else
-                                                    <a href="{{ route('espace-client.index', $reservation) }}" class="btn btn-link text-lux-gold p-0 border-0 text-decoration-none small fw-medium" style="transition: color 0.3s; border-bottom: 1px solid transparent !important;" onmouseover="this.style.color='var(--lux-light-gold)'; this.style.borderBottomColor='var(--lux-light-gold)'" onmouseout="this.style.color='var(--lux-gold)'; this.style.borderBottomColor='transparent'">Voir détails</a>
+                                                    <a href="{{ route('espace-client.index', $reservation) }}" class="btn btn-link text-lux-gold p-0 border-0 text-decoration-none small fw-medium">Voir détails</a>
                                                 @endif
                                             @endif
                                         </td>
@@ -403,23 +421,31 @@
                                                 <a href="{{ route('espace-client.documents') }}" class="btn btn-outline-secondary btn-sm px-4 py-2 rounded small fw-medium border-lux-gray text-lux-gray text-decoration-none" style="transition: all 0.3s;" onmouseover="this.style.borderColor='var(--lux-gold)'; this.style.color='var(--lux-gold)'" onmouseout="this.style.borderColor='var(--lux-gray)'; this.style.color='var(--lux-gray)'">Facture</a>
                                             </div>
                                         @else
-                                            @if($reservation->status === 'deposit_paid')
-                                                @php
-                                                    $pendingBalance = $reservation->payments()->where('type', 'balance')->whereIn('status', ['pending', 'processing'])->first();
-                                                    $pendingGuarantee = $reservation->payments()->where('type', 'deposit_guarantee')->whereIn('status', ['pending', 'processing'])->first();
-                                                @endphp
-                                                <div class="d-flex flex-column gap-2 align-items-end">
-                                                    @if($pendingBalance)
-                                                        <a href="{{ route('espace-client.pay-balance', $reservation) }}" class="btn btn-lux-primary btn-sm px-4 py-1 rounded small fw-medium text-decoration-none">Régler Solde</a>
-                                                    @endif
-                                                    @if($pendingGuarantee)
-                                                        <a href="{{ route('espace-client.pay-deposit-guarantee', $reservation) }}" class="btn btn-lux-secondary btn-sm px-4 py-1 rounded small fw-medium text-decoration-none">Régler Caution</a>
-                                                    @endif
-                                            @elseif($reservation->status === 'pending')
-                                                <div class="d-flex flex-column gap-2 w-100">
-                                                    <a href="{{ route('espace-client.pay-deposit', $reservation) }}" class="btn btn-lux-secondary btn-sm w-100 py-2 rounded small fw-medium text-decoration-none">Régler l'acompte</a>
-                                                    <a href="{{ route('espace-client.index', $reservation) }}" class="text-lux-gray small text-center text-decoration-none">Voir détails</a>
-                                                </div>
+                                            @if($reservation->allowsClientOnlinePayment())
+                                                @if($reservation->status === 'deposit_paid')
+                                                    @php
+                                                        $pendingBalance = $reservation->payments()->where('type', 'balance')->whereIn('status', ['pending', 'processing'])->first();
+                                                        $pendingGuarantee = $reservation->payments()->where('type', 'deposit_guarantee')->whereIn('status', ['pending', 'processing'])->first();
+                                                    @endphp
+                                                    <div class="d-flex flex-column gap-2 align-items-end">
+                                                        @if($pendingBalance)
+                                                            <a href="{{ route('espace-client.pay-balance', $reservation) }}" class="btn btn-lux-primary btn-sm px-4 py-1 rounded small fw-medium text-decoration-none">Régler Solde</a>
+                                                        @endif
+                                                        @if($pendingGuarantee)
+                                                            <a href="{{ route('espace-client.pay-deposit-guarantee', $reservation) }}" class="btn btn-lux-secondary btn-sm px-4 py-1 rounded small fw-medium text-decoration-none">Régler Caution</a>
+                                                        @endif
+                                                    </div>
+                                                @elseif($reservation->status === 'pending')
+                                                    <div class="d-flex flex-column gap-2 w-100">
+                                                        <a href="{{ route('espace-client.pay-deposit', $reservation) }}" class="btn btn-lux-secondary btn-sm w-100 py-2 rounded small fw-medium text-decoration-none">Régler l'acompte</a>
+                                                        <a href="{{ route('espace-client.index', $reservation) }}" class="text-lux-gray small text-center text-decoration-none">Voir détails</a>
+                                                    </div>
+                                                @else
+                                                    <a href="{{ route('espace-client.index', $reservation) }}" class="btn btn-lux-primary btn-sm px-4 py-2 rounded small fw-medium text-decoration-none">Voir détails</a>
+                                                @endif
+                                            @elseif($reservation->hasPendingClientPayments())
+                                                <x-reservation-offline-payment-notice class="text-end mb-2" />
+                                                <a href="{{ route('espace-client.index', $reservation) }}" class="btn btn-lux-primary btn-sm px-4 py-2 rounded small fw-medium text-decoration-none">Voir détails</a>
                                             @else
                                                 <a href="{{ route('espace-client.index', $reservation) }}" class="btn btn-lux-primary btn-sm px-4 py-2 rounded small fw-medium text-decoration-none">Voir détails</a>
                                             @endif

@@ -252,10 +252,28 @@
 
             <!-- Right Actions -->
             <div class="d-flex align-items-center gap-4">
-                <button class="btn btn-link text-white-50 p-0 position-relative border-0 bg-transparent" style="text-decoration: none;">
-                    <i class="far fa-bell fs-5"></i>
-                    <span class="position-absolute top-0 end-0 translate-middle bg-lux-gold rounded-circle" style="width: 8px; height: 8px;"></span>
-                </button>
+                <div class="dropdown">
+                    <button class="btn btn-link text-white-50 p-0 position-relative border-0 bg-transparent" type="button" id="clientNotificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration: none;">
+                        <i class="far fa-bell fs-5"></i>
+                        <span id="client-notifications-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem; display: none;">
+                            <span id="client-notifications-count">0</span>
+                            <span class="visually-hidden">notifications non lues</span>
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="clientNotificationsDropdown" style="min-width: 340px; max-width: 380px; max-height: 420px; overflow-y: auto;">
+                        <li class="dropdown-header d-flex justify-content-between align-items-center py-2 px-3">
+                            <span class="fw-medium">Notifications</span>
+                            <button class="btn btn-link btn-sm text-decoration-none p-0" id="client-mark-all-read-btn">Tout marquer lu</button>
+                        </li>
+                        <li><hr class="dropdown-divider my-0"></li>
+                        <li id="client-notifications-list">
+                            <div class="px-3 py-4 text-center text-muted">
+                                <i class="fa-regular fa-bell-slash mb-2" style="font-size: 1.8rem; opacity: 0.3;"></i>
+                                <p class="small mb-0">Aucune notification</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
                 <div class="d-flex align-items-center gap-3 ps-4 border-start border-white border-opacity-10">
                     <div class="text-end d-none d-md-block" style="padding-top: 0.875rem;">
                         <p class="text-white small fw-medium mb-0">{{ auth()->user()->first_name ?? '' }} {{ auth()->user()->last_name ?? '' }}</p>
@@ -451,6 +469,129 @@
     <script>
         // Gestion de la déconnexion dans le dashboard
         document.addEventListener('DOMContentLoaded', function() {
+            const notificationsUrl = '{{ route("espace-client.notifications.index") }}';
+            const markAsReadUrl = '{{ route("espace-client.notifications.mark-as-read", ":id") }}';
+            const markAllAsReadUrl = '{{ route("espace-client.notifications.mark-all-as-read") }}';
+            const csrfToken = '{{ csrf_token() }}';
+            const notificationsListEl = document.getElementById('client-notifications-list');
+            const notificationsBadgeEl = document.getElementById('client-notifications-badge');
+            const notificationsCountEl = document.getElementById('client-notifications-count');
+            const markAllReadBtn = document.getElementById('client-mark-all-read-btn');
+
+            function updateUnreadCount(count) {
+                if (!notificationsBadgeEl || !notificationsCountEl) return;
+
+                if (count > 0) {
+                    notificationsCountEl.textContent = count > 99 ? '99+' : String(count);
+                    notificationsBadgeEl.style.display = 'inline-block';
+                } else {
+                    notificationsBadgeEl.style.display = 'none';
+                }
+            }
+
+            function updateNotificationsList(notifications) {
+                if (!notificationsListEl) return;
+
+                if (!notifications || notifications.length === 0) {
+                    notificationsListEl.innerHTML = `
+                        <div class="px-3 py-4 text-center text-muted">
+                            <i class="fa-regular fa-bell-slash mb-2" style="font-size: 1.8rem; opacity: 0.3;"></i>
+                            <p class="small mb-0">Aucune notification</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                notifications.forEach(function(notif) {
+                    html += `
+                        <li>
+                            <a class="dropdown-item client-notification-item bg-light" href="${notif.url || '#'}" data-notification-id="${notif.id}" style="cursor: pointer;">
+                                <div class="d-flex gap-3">
+                                    <div class="flex-shrink-0">
+                                        <i class="fa-solid ${notif.icon || 'fa-bell'} text-${notif.color || 'primary'}" style="font-size: 1.1rem;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-medium small mb-1">${notif.title || 'Notification'}</div>
+                                        <div class="text-muted small mb-1" style="font-size: 0.75rem;">${notif.message || ''}</div>
+                                        <div class="text-muted" style="font-size: 0.7rem;">${notif.created_at || ''}</div>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                    `;
+                });
+
+                notificationsListEl.innerHTML = html;
+
+                document.querySelectorAll('.client-notification-item').forEach(function(item) {
+                    item.addEventListener('click', function() {
+                        const notificationId = this.getAttribute('data-notification-id');
+                        if (!notificationId) return;
+
+                        fetch(markAsReadUrl.replace(':id', notificationId), {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                updateUnreadCount(data.unread_count);
+                            }
+                        })
+                        .catch(() => {});
+                    });
+                });
+            }
+
+            function loadNotifications() {
+                fetch(notificationsUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success) return;
+                        updateNotificationsList(data.notifications || []);
+                        updateUnreadCount(data.unread_count || 0);
+                    })
+                    .catch(() => {});
+            }
+
+            if (markAllReadBtn) {
+                markAllReadBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    fetch(markAllAsReadUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success) return;
+                        updateUnreadCount(0);
+                        loadNotifications();
+                    })
+                    .catch(() => {});
+                });
+            }
+
+            const notificationsDropdown = document.getElementById('clientNotificationsDropdown');
+            if (notificationsDropdown) {
+                notificationsDropdown.addEventListener('show.bs.dropdown', loadNotifications);
+                loadNotifications();
+                setInterval(loadNotifications, 30000);
+            }
+
             const logoutBtn = document.getElementById('logout-btn-dashboard');
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', function(e) {

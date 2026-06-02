@@ -7,6 +7,7 @@ use PHPMailer\PHPMailer\Exception;
 use App\Helpers\SettingsHelper;
 use App\Models\Reservation;
 use App\Models\Payment;
+use App\Models\PromoCode;
 use App\Models\User;
 use App\Services\PrivilegeClubService;
 use Illuminate\Support\Facades\Log;
@@ -272,6 +273,27 @@ class EmailService
     }
 
     /**
+     * Envoyer un code promotionnel au client (§3.2 CDC).
+     */
+    public function sendPromoCodeEmail(User $user, PromoCode $promoCode)
+    {
+        $data = [
+            'user' => $user,
+            'promoCode' => $promoCode,
+            'validFrom' => $promoCode->valid_from?->format('d/m/Y'),
+            'validUntil' => $promoCode->valid_until?->format('d/m/Y'),
+            'bookingUrl' => route('bookings.create'),
+        ];
+
+        return $this->sendEmail(
+            $user->email,
+            "Votre code promotionnel LUXÎLES : {$promoCode->code}",
+            'emails.promo-code',
+            $data
+        );
+    }
+
+    /**
      * Envoyer un email de réinitialisation de mot de passe
      */
     public function sendPasswordResetEmail(User $user, string $token)
@@ -340,6 +362,46 @@ class EmailService
                 ? 'Félicitations — Votre statut LUXÎLES PRIVILEGE CLUB évolue'
                 : 'Mise à jour de votre statut LUXÎLES PRIVILEGE CLUB',
             'emails.privilege-club-tier-change',
+            $data
+        );
+    }
+
+    /**
+     * Alerte interne admins : changement de palier Privilege Club à traiter (WhatsApp).
+     */
+    public function sendPrivilegeClubAdminAlert(User $client, ?string $oldTier, ?string $newTier): bool
+    {
+        $admins = User::query()
+            ->where('is_admin', true)
+            ->where('is_active', true)
+            ->whereNotNull('email')
+            ->pluck('email')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($admins === []) {
+            return false;
+        }
+
+        $clubService = app(PrivilegeClubService::class);
+        $isUpgrade = $clubService->tierRank($newTier) > $clubService->tierRank($oldTier);
+
+        $data = [
+            'client' => $client,
+            'oldTier' => $oldTier,
+            'newTier' => $newTier,
+            'oldTierLabel' => $clubService->tierLabel($oldTier),
+            'newTierLabel' => $clubService->tierLabel($newTier),
+            'isUpgrade' => $isUpgrade,
+            'adminClientUrl' => route('admin.clients.show', $client),
+        ];
+
+        return $this->sendEmail(
+            $admins,
+            'Action requise — changement de palier Privilege Club',
+            'emails.privilege-club-admin-alert',
             $data
         );
     }

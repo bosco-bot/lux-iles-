@@ -47,6 +47,16 @@ php artisan serve
 | §3.10 | Documents client (PDF/Word, 15 Mo) |
 | §3.11 | Réservation manuelle admin |
 
+### Disponibilité calendrier (post-v4.0.1)
+
+Un seul service centralise réservations actives et **périodes bloquées** (`villa_availability_blocks`) :
+
+- **Public :** fiche villa (`/villas/{id}`), tunnel `/booking/create` — contexte `VillaAvailabilityContext::publicSite()`
+- **Admin :** création / édition réservation manuelle — contexte `admin()`, API `GET /admin/villas/{id}/blocked-dates`
+
+Fichiers : `app/Services/VillaAvailabilityService.php`, `app/Services/VillaAvailabilityContext.php`  
+Suivi détaillé : `RECAPITULATIF_CDC_V4.md`
+
 ## Commandes utiles
 
 ```bash
@@ -80,9 +90,13 @@ La suite couvre notamment :
 - Privilege Club
 - Statistiques de trafic
 - Contrôles d'accès admin / client
+- Disponibilité villas (`VillaAvailabilityServiceTest`)
+- Réservations manuelles — paiements et Stripe client (`ManualReservation*Test`)
 
 ```bash
 php artisan test
+php artisan test --filter=VillaAvailabilityServiceTest
+php artisan test --filter=ManualReservation
 ```
 
 ## Planification (production)
@@ -97,6 +111,7 @@ Tâches planifiées : synchronisation iCal, rappels email, Privilege Club, etc. 
 
 ## Documentation projet
 
+- **Suivi livraison & recette :** `RECAPITULATIF_CDC_V4.md`
 - Cahier des charges : `docs/LUXÎLES luxiles fr cahier de charge.txt`
 - Déploiement : `GUIDE_DEPLOIEMENT_PRODUCTION.md`, `DEPLOIEMENT_ACTUEL.md`
 

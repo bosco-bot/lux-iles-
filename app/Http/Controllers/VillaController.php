@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Villa;
+use App\Services\VillaAvailabilityContext;
+use App\Services\VillaAvailabilityService;
 use App\Models\Island;
 use App\Models\Equipment;
 use App\Helpers\SettingsHelper;
@@ -150,7 +152,7 @@ class VillaController extends Controller
     /**
      * Afficher les détails d'une villa
      */
-    public function show($id)
+    public function show($id, VillaAvailabilityService $availability)
     {
         $villa = Villa::with(['island', 'photos', 'equipments', 'availabilityBlocks'])
             ->where('is_active', true)
@@ -163,11 +165,9 @@ class VillaController extends Controller
         $averageRating = $villa->averageRating();
         $reviewsCount = $villa->publishedReviewsCount();
 
-        // Récupérer les réservations confirmées ou payées
-        $reservations = \App\Models\Reservation::where('villa_id', $villa->id)
-            ->whereIn('status', ['confirmed', 'deposit_paid', 'fully_paid', 'completed'])
-            ->where('check_out_date', '>=', now()->toDateString())
-            ->get();
+        $publicAvailability = VillaAvailabilityContext::publicSite();
+        $blockedDates = $availability->getBlockedDates($villa->id, null, $publicAvailability);
+        $reservations = $availability->getReservationsForCalendar($villa->id, $publicAvailability);
 
         // Récupérer la photo principale
         $primaryPhoto = $villa->photos->where('is_primary', true)->first() 
@@ -188,6 +188,7 @@ class VillaController extends Controller
             'primaryPhoto',
             'otherPhotos',
             'reservations',
+            'blockedDates',
             'globalTaxRate',
             'touristTaxPerNight',
             'touristTaxEnabled',

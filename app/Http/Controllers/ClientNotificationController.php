@@ -1,31 +1,28 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Models\Payment;
-use App\Models\Reservation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class NotificationController extends Controller
+class ClientNotificationController extends Controller
 {
     /**
-     * Récupérer les notifications non lues de l'utilisateur connecté
+     * Récupérer les notifications non lues du client connecté.
      */
     public function index(Request $request)
     {
         $user = Auth::user();
-        $limit = $request->get('limit', 20);
-        
+        $limit = $request->integer('limit', 20);
+
         $notifications = $user->unreadNotifications()
             ->orderBy('created_at', 'desc')
             ->take($limit)
             ->get();
-        
-        // Formater les notifications
+
         $formatted = $notifications->map(function ($notification) {
             $data = $notification->data;
+
             return [
                 'id' => $notification->id,
                 'type' => $data['type'] ?? 'info',
@@ -38,7 +35,7 @@ class NotificationController extends Controller
                 'created_at_full' => $notification->created_at->toIso8601String(),
             ];
         });
-        
+
         return response()->json([
             'success' => true,
             'notifications' => $formatted,
@@ -47,39 +44,37 @@ class NotificationController extends Controller
     }
 
     /**
-     * Marquer une notification comme lue
+     * Marquer une notification comme lue.
      */
-    public function markAsRead(Request $request, $id)
+    public function markAsRead(string $id)
     {
         $user = Auth::user();
-        
-        // Laravel utilise un UUID pour les notifications, mais la route peut recevoir un ID
         $notification = $user->notifications()->where('id', $id)->first();
-        
-        if ($notification) {
-            $notification->markAsRead();
-            
+
+        if (! $notification) {
             return response()->json([
-                'success' => true,
-                'message' => 'Notification marquée comme lue.',
-                'unread_count' => $user->unreadNotifications()->count(),
-            ]);
+                'success' => false,
+                'message' => 'Notification non trouvée.',
+            ], 404);
         }
-        
+
+        $notification->markAsRead();
+
         return response()->json([
-            'success' => false,
-            'message' => 'Notification non trouvée.',
-        ], 404);
+            'success' => true,
+            'message' => 'Notification marquée comme lue.',
+            'unread_count' => $user->unreadNotifications()->count(),
+        ]);
     }
 
     /**
-     * Marquer toutes les notifications comme lues
+     * Marquer toutes les notifications comme lues.
      */
     public function markAllAsRead()
     {
         $user = Auth::user();
         $user->unreadNotifications->markAsRead();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Toutes les notifications ont été marquées comme lues.',
@@ -88,55 +83,42 @@ class NotificationController extends Controller
     }
 
     /**
-     * Récupérer le nombre de notifications non lues
+     * Récupérer le nombre de notifications non lues.
      */
     public function unreadCount()
     {
         $user = Auth::user();
-        
+
         return response()->json([
             'success' => true,
             'count' => $user->unreadNotifications()->count(),
         ]);
     }
 
-    /**
-     * Résout une URL de notification robuste (évite les 404 sur ressources supprimées).
-     */
     private function resolveNotificationUrl(array $data): string
     {
         $type = $data['type'] ?? null;
         $rawUrl = $data['url'] ?? '#';
 
-        if ($type === 'reservation_created') {
-            $reservationId = isset($data['reservation_id']) ? (int) $data['reservation_id'] : null;
-            if ($reservationId && Reservation::where('id', $reservationId)->exists()) {
-                return route('admin.reservations.show', ['id' => $reservationId], false);
-            }
-
-            return route('admin.reservations', [], false);
-        }
-
-        if ($type === 'payment_received') {
-            $paymentId = isset($data['payment_id']) ? (int) $data['payment_id'] : null;
-            if ($paymentId && Payment::where('id', $paymentId)->exists()) {
-                return route('admin.payments.show', ['id' => $paymentId], false);
-            }
-
-            return route('admin.payments', [], false);
-        }
-
         if ($type === 'message_received') {
-            return route('admin.messages', [], false);
+            $conversationId = null;
+            if (! empty($data['reservation_id'])) {
+                $conversationId = 'reservation_' . $data['reservation_id'];
+            } elseif (! empty($data['sender_id'])) {
+                $conversationId = 'user_' . $data['sender_id'];
+            }
+
+            if ($conversationId) {
+                return route('espace-client.messages', ['conversation_id' => $conversationId], false);
+            }
+
+            return route('espace-client.messages', [], false);
         }
 
-        return $this->normalizeAdminUrl($rawUrl);
+        return $this->normalizeUrl($rawUrl);
     }
 
-    /**
-     * Convertit les URL absolues en chemin relatif pour éviter les domaines périmés.
-     */
-    private function normalizeAdminUrl(?string $url): string
+    private function normalizeUrl(?string $url): string
     {
         if (! $url || $url === '#') {
             return '#';
@@ -156,3 +138,4 @@ class NotificationController extends Controller
         return $query ? "{$path}?{$query}" : $path;
     }
 }
+

@@ -60,6 +60,44 @@
         </div>
     </div>
 
+    <section class="bg-white rounded shadow-sm border p-3 mb-4" style="border-color: rgba(0,0,0,0.05) !important;">
+        <form action="{{ route('admin.clients.send-promo-code', $client) }}" method="POST" class="row g-2 align-items-end">
+            @csrf
+            <div class="col-lg-8">
+                <label for="promo_code_id" class="small text-uppercase fw-medium text-lux-greyBlue mb-1" style="font-size: 0.7rem;">
+                    Envoyer un code promo au client
+                </label>
+                <select name="promo_code_id" id="promo_code_id" class="form-select form-select-sm" required>
+                    <option value="">Sélectionner un code promo actif</option>
+                    @foreach($activePromoCodes as $promo)
+                        <option value="{{ $promo->id }}">
+                            {{ $promo->code }} — {{ $promo->type === 'percent' ? rtrim(rtrim(number_format($promo->value, 2, ',', ''), '0'), ',') . '%' : number_format($promo->value, 2, ',', ' ') . '€' }}
+                            @if($promo->valid_until) (jusqu'au {{ $promo->valid_until->format('d/m/Y') }}) @endif
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-lg-4 d-grid">
+                <button type="submit" class="btn btn-outline-lux-gold mb-2">
+                    <i class="fa-solid fa-ticket me-2"></i>Envoyer par email
+                </button>
+                <button
+                    type="submit"
+                    class="btn btn-outline-success"
+                    formaction="{{ route('admin.clients.open-promo-code-whatsapp', $client) }}"
+                    formtarget="_blank"
+                >
+                    <i class="fa-brands fa-whatsapp me-2"></i>Envoyer par WhatsApp
+                </button>
+            </div>
+        </form>
+        @if($activePromoCodes->isEmpty())
+            <p class="small text-lux-greyBlue mb-0 mt-2">
+                Aucun code promo actif pour le moment. Créez-en un depuis le module Codes promo.
+            </p>
+        @endif
+    </section>
+
     <div class="row g-4">
         <!-- Left Column -->
         <div class="col-lg-8">
@@ -227,12 +265,22 @@
                                             → <strong>{{ $clubService->tierLabel($notification->new_tier) }}</strong>
                                         </p>
                                     </div>
-                                    <form action="{{ route('admin.clients.privilege-club.whatsapp-sent', [$client, $notification]) }}" method="POST" class="mb-0">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-success text-white">
-                                            <i class="fa-brands fa-whatsapp me-1"></i> Marquer WhatsApp envoyé
-                                        </button>
-                                    </form>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a
+                                            href="{{ route('admin.clients.privilege-club.whatsapp-open', [$client, $notification]) }}"
+                                            target="_blank"
+                                            rel="noopener"
+                                            class="btn btn-sm btn-outline-success"
+                                        >
+                                            <i class="fa-brands fa-whatsapp me-1"></i> Ouvrir WhatsApp
+                                        </a>
+                                        <form action="{{ route('admin.clients.privilege-club.whatsapp-sent', [$client, $notification]) }}" method="POST" class="mb-0">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-success text-white">
+                                                <i class="fa-solid fa-check me-1"></i> Marquer envoyé
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             @endforeach
                         </div>

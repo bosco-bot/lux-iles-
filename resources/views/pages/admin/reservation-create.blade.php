@@ -8,6 +8,10 @@
     <span class="text-white">Nouvelle</span>
 @endsection
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+@endpush
+
 @section('content')
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -83,18 +87,23 @@
                         </div>
                         <div class="col-md-4">
                             <label for="check_in_date" class="form-label small text-uppercase fw-medium text-lux-greyBlue">Arrivée <span class="text-danger">*</span></label>
-                            <input type="date" name="check_in_date" id="check_in_date" class="form-control @error('check_in_date') is-invalid @enderror" value="{{ old('check_in_date') }}" required>
+                            <input type="text" name="check_in_date" id="check_in_date" class="form-control js-date-field @error('check_in_date') is-invalid @enderror" value="{{ old('check_in_date') }}" placeholder="Choisir une villa d'abord" autocomplete="off" required readonly>
                             @error('check_in_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
                             <label for="check_out_date" class="form-label small text-uppercase fw-medium text-lux-greyBlue">Départ <span class="text-danger">*</span></label>
-                            <input type="date" name="check_out_date" id="check_out_date" class="form-control @error('check_out_date') is-invalid @enderror" value="{{ old('check_out_date') }}" required>
+                            <input type="text" name="check_out_date" id="check_out_date" class="form-control js-date-field @error('check_out_date') is-invalid @enderror" value="{{ old('check_out_date') }}" placeholder="Choisir une villa d'abord" autocomplete="off" required readonly>
                             @error('check_out_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
                             <label for="number_of_guests" class="form-label small text-uppercase fw-medium text-lux-greyBlue">Voyageurs <span class="text-danger">*</span></label>
                             <input type="number" name="number_of_guests" id="number_of_guests" class="form-control @error('number_of_guests') is-invalid @enderror" value="{{ old('number_of_guests', 2) }}" min="1" required>
                             @error('number_of_guests')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-12">
+                            <p class="small text-lux-greyBlue mb-0" id="availability-hint">
+                                Sélectionnez une villa pour afficher les dates disponibles.
+                            </p>
                         </div>
                     </div>
                 </section>
@@ -196,6 +205,7 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('manual-reservation-form');
@@ -209,10 +219,202 @@ document.addEventListener('DOMContentLoaded', function () {
     const priceBreakdown = document.getElementById('price-breakdown');
     const priceAlert = document.getElementById('price-calc-alert');
     const villaRulesHint = document.getElementById('villa-rules-hint');
+    const availabilityHint = document.getElementById('availability-hint');
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const blockedDatesUrlFor = function (villaId) {
+        return @json(url('/admin/villas')) + '/' + villaId + '/blocked-dates';
+    };
+    const hasPreselectedClient = @json((bool) request('client_id'));
+
+    const flatpickrLocale = {
+        firstDayOfWeek: 1,
+        weekdays: {
+            shorthand: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
+            longhand: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
+        },
+        months: {
+            shorthand: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
+            longhand: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
+        },
+    };
+
+    let blockedDatesSet = new Set();
+    let minStayNights = 3;
+    let checkInPicker = null;
+    let checkOutPicker = null;
 
     function formatEuro(amount) {
         return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+    }
+
+    function localYmd(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + d;
+    }
+
+    function isPeriodBlocked(checkInYmd, checkOutYmd) {
+        if (!checkInYmd || !checkOutYmd) {
+            return false;
+        }
+        const start = new Date(checkInYmd + 'T12:00:00');
+        const end = new Date(checkOutYmd + 'T12:00:00');
+        const cur = new Date(start);
+        while (cur < end) {
+            if (blockedDatesSet.has(localYmd(cur))) {
+                return true;
+            }
+            cur.setDate(cur.getDate() + 1);
+        }
+        return false;
+    }
+
+    function setDateFieldsLocked(locked) {
+        [checkIn, checkOut].forEach(function (el) {
+            el.readOnly = locked;
+            el.classList.toggle('bg-light', locked);
+            el.placeholder = locked ? 'Choisir une villa d\'abord' : 'Sélectionner…';
+        });
+    }
+
+    function updateAvailabilityHint() {
+        if (!villaSelect.value) {
+            availabilityHint.textContent = hasPreselectedClient
+                ? 'Client présélectionné — choisissez une villa pour activer les dates d\'arrivée et de départ.'
+                : 'Sélectionnez une villa pour afficher les dates disponibles.';
+            availabilityHint.classList.remove('text-danger');
+            return;
+        }
+        const count = blockedDatesSet.size;
+        if (count === 0) {
+            availabilityHint.textContent = 'Aucune date bloquée sur le calendrier de cette villa.';
+        } else {
+            availabilityHint.textContent = count + ' jour' + (count > 1 ? 's' : '') + ' indisponible' + (count > 1 ? 's' : '') + ' (réservations ou blocages). Les dates grisées ne sont pas sélectionnables.';
+        }
+        availabilityHint.classList.remove('text-danger');
+    }
+
+    function validateSelectedPeriod() {
+        const inDate = checkIn.value;
+        const outDate = checkOut.value;
+        if (inDate && isDateBlockedString(inDate)) {
+            availabilityHint.textContent = 'La date d\'arrivée sélectionnée n\'est pas disponible.';
+            availabilityHint.classList.add('text-danger');
+            return false;
+        }
+        if (outDate && isDateBlockedString(outDate)) {
+            availabilityHint.textContent = 'La date de départ sélectionnée n\'est pas disponible.';
+            availabilityHint.classList.add('text-danger');
+            return false;
+        }
+        if (inDate && outDate && isPeriodBlocked(inDate, outDate)) {
+            availabilityHint.textContent = 'Cette période chevauche des dates déjà réservées ou bloquées.';
+            availabilityHint.classList.add('text-danger');
+            return false;
+        }
+        updateAvailabilityHint();
+        return true;
+    }
+
+    function isDateBlockedString(ymd) {
+        return blockedDatesSet.has(ymd);
+    }
+
+    function destroyDatePickers() {
+        if (checkInPicker) {
+            checkInPicker.destroy();
+            checkInPicker = null;
+        }
+        if (checkOutPicker) {
+            checkOutPicker.destroy();
+            checkOutPicker = null;
+        }
+    }
+
+    function initDatePickers() {
+        destroyDatePickers();
+
+        const blockedList = Array.from(blockedDatesSet);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        checkInPicker = flatpickr(checkIn, {
+            dateFormat: 'Y-m-d',
+            minDate: today,
+            disable: blockedList,
+            locale: flatpickrLocale,
+            defaultDate: checkIn.value || null,
+            onChange: function (selectedDates) {
+                if (selectedDates.length > 0) {
+                    const minOut = new Date(selectedDates[0].getTime() + minStayNights * 24 * 60 * 60 * 1000);
+                    if (checkOutPicker) {
+                        checkOutPicker.set('minDate', minOut);
+                    }
+                }
+                validateSelectedPeriod();
+                recalculatePrice();
+            },
+        });
+
+        let checkOutMin = today;
+        if (checkIn.value) {
+            const checkInDate = new Date(checkIn.value + 'T12:00:00');
+            checkOutMin = new Date(checkInDate.getTime() + minStayNights * 24 * 60 * 60 * 1000);
+        }
+
+        checkOutPicker = flatpickr(checkOut, {
+            dateFormat: 'Y-m-d',
+            minDate: checkOutMin,
+            disable: blockedList,
+            locale: flatpickrLocale,
+            defaultDate: checkOut.value || null,
+            onChange: function () {
+                validateSelectedPeriod();
+                recalculatePrice();
+            },
+        });
+    }
+
+    function loadBlockedDates(villaId) {
+        if (!villaId) {
+            blockedDatesSet = new Set();
+            destroyDatePickers();
+            checkIn.value = '';
+            checkOut.value = '';
+            setDateFieldsLocked(true);
+            updateAvailabilityHint();
+            return Promise.resolve();
+        }
+
+        setDateFieldsLocked(true);
+        availabilityHint.textContent = 'Chargement du calendrier…';
+
+        return fetch(blockedDatesUrlFor(villaId), {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        })
+        .then(function (res) {
+            if (!res.ok) {
+                throw new Error('blocked_dates_http_' + res.status);
+            }
+            return res.json();
+        })
+        .then(function (data) {
+            blockedDatesSet = new Set(data.blocked_dates || []);
+            minStayNights = data.min_stay || 3;
+            setDateFieldsLocked(false);
+            initDatePickers();
+            updateAvailabilityHint();
+            validateSelectedPeriod();
+        })
+        .catch(function () {
+            blockedDatesSet = new Set();
+            setDateFieldsLocked(false);
+            availabilityHint.textContent = 'Impossible de charger les dates indisponibles. Vous pouvez tout de même saisir les dates manuellement.';
+            availabilityHint.classList.add('text-danger');
+            initDatePickers();
+        });
     }
 
     function updateVillaHint() {
@@ -234,6 +436,10 @@ document.addEventListener('DOMContentLoaded', function () {
         priceBreakdown.classList.add('d-none');
 
         if (!villaId || !inDate || !outDate || !guestCount) {
+            return;
+        }
+
+        if (!validateSelectedPeriod()) {
             return;
         }
 
@@ -286,16 +492,48 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    [villaSelect, checkIn, checkOut, guests].forEach(function (el) {
-        el.addEventListener('change', function () {
-            updateVillaHint();
+    villaSelect.addEventListener('change', function () {
+        checkIn.value = '';
+        checkOut.value = '';
+        updateVillaHint();
+        loadBlockedDates(villaSelect.value).then(function () {
             recalculatePrice();
         });
     });
 
+    guests.addEventListener('change', recalculatePrice);
+
+    form.addEventListener('submit', function (e) {
+        if (!villaSelect.value) {
+            e.preventDefault();
+            availabilityHint.textContent = 'Veuillez sélectionner une villa avant de créer la réservation.';
+            availabilityHint.classList.add('text-danger');
+            villaSelect.focus();
+            return;
+        }
+        if (!validateSelectedPeriod()) {
+            e.preventDefault();
+        }
+    });
+
+    [checkIn, checkOut].forEach(function (el) {
+        el.addEventListener('click', function () {
+            if (!villaSelect.value) {
+                availabilityHint.textContent = 'Choisissez d\'abord une villa pour activer le calendrier des dates.';
+                availabilityHint.classList.add('text-danger');
+                villaSelect.focus();
+            }
+        });
+    });
+
+    setDateFieldsLocked(true);
     updateVillaHint();
-    if (villaSelect.value && checkIn.value && checkOut.value) {
-        recalculatePrice();
+    updateAvailabilityHint();
+
+    if (villaSelect.value) {
+        loadBlockedDates(villaSelect.value).then(function () {
+            recalculatePrice();
+        });
     }
 });
 </script>

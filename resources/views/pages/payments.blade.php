@@ -198,7 +198,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-end">
                                         <div class="d-flex align-items-center justify-content-end gap-2">
-                                            @if($payment->status === 'pending' && $payment->reservation && $payment->type === 'balance')
+                                            @if($payment->status === 'pending' && $payment->reservation && $payment->type === 'balance' && $payment->reservation->allowsClientOnlinePayment())
                                                 <a href="{{ route('espace-client.pay-balance', $payment->reservation) }}" class="btn btn-sm btn-lux-primary" style="font-size: 0.75rem; padding: 0.375rem 0.75rem;">
                                                     <i class="fa-solid fa-credit-card me-1"></i> Payer
                                                 </a>

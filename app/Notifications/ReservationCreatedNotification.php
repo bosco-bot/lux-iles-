@@ -94,7 +94,7 @@ class ReservationCreatedNotification extends Notification
             'villa_name' => $villaName,
             'guest_name' => $this->reservation->guest_first_name . ' ' . $this->reservation->guest_last_name,
             'amount' => $this->reservation->total_price,
-            'url' => route('admin.reservations.show', $this->reservation->id),
+            'url' => route('admin.reservations.show', ['id' => $this->reservation->id], false),
             'icon' => 'fa-calendar-check',
             'color' => 'primary',
         ];

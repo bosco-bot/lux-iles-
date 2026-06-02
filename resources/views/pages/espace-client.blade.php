@@ -100,7 +100,7 @@
                             
                             <div class="d-flex gap-2 mt-3">
                                 <a href="{{ route('espace-client.reservations') }}" class="btn btn-lux-primary flex-fill text-decoration-none">Gérer</a>
-                                @if($nextReservation->status === 'pending')
+                                @if($nextReservation->status === 'pending' && $nextReservation->allowsClientOnlinePayment())
                                     <a href="{{ route('espace-client.pay-deposit', $nextReservation) }}" class="btn btn-lux-secondary flex-fill text-decoration-none">Régler l'acompte</a>
                                 @else
                                     @php
@@ -240,9 +240,13 @@
                         @endif
                     </div>
                     
-                    <a href="{{ route('espace-client.pay-balance', $nextReservation) }}" class="btn btn-lux-primary w-100">
-                        Régler le solde
-                    </a>
+                    @if($nextReservation->allowsClientOnlinePayment())
+                        <a href="{{ route('espace-client.pay-balance', $nextReservation) }}" class="btn btn-lux-primary w-100">
+                            Régler le solde
+                        </a>
+                    @else
+                        <x-reservation-offline-payment-notice />
+                    @endif
                 </section>
             @endif
 
@@ -277,9 +281,13 @@
                         </p>
                     </div>
 
-                    <a href="{{ route('espace-client.pay-deposit-guarantee', $nextReservation) }}" class="btn btn-lux-secondary w-100">
-                        Régler ma caution
-                    </a>
+                    @if($nextReservation->allowsClientOnlinePayment())
+                        <a href="{{ route('espace-client.pay-deposit-guarantee', $nextReservation) }}" class="btn btn-lux-secondary w-100">
+                            Régler ma caution
+                        </a>
+                    @else
+                        <x-reservation-offline-payment-notice />
+                    @endif
                 </section>
             @elseif($nextReservation && $paymentStatus && $paymentStatus['remaining'] <= 0)
                 <section class="widget-card mb-4">

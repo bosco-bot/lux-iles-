@@ -479,34 +479,8 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Générer la liste des dates bloquées (comme sur la page détail villa)
-    @php
-        $blockedDates = [];
-        foreach($villa->availabilityBlocks as $block) {
-            $start = new \DateTime($block->start_date);
-            $end = new \DateTime($block->end_date);
-            $end->modify('+1 day');
-            $current = clone $start;
-            while ($current < $end) {
-                $blockedDates[] = $current->format('Y-m-d');
-                $current->modify('+1 day');
-            }
-        }
-        if(isset($reservations)) {
-            foreach($reservations as $reservation) {
-                $start = new \DateTime($reservation->check_in_date);
-                $end = new \DateTime($reservation->check_out_date);
-                $end->modify('+1 day');
-                $current = clone $start;
-                while ($current < $end) {
-                    $blockedDates[] = $current->format('Y-m-d');
-                    $current->modify('+1 day');
-                }
-            }
-        }
-    @endphp
-    
-    const blockedDatesList = @json(array_unique($blockedDates));
+    // Dates bloquées (VillaAvailabilityService — étape C)
+    const blockedDatesList = @json($blockedDates ?? []) || [];
     
     // Fonction pour convertir les dates bloquées au format attendu par Flatpickr
     function getDisabledDates(date) {

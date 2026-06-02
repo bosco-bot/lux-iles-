@@ -30,5 +30,13 @@ class SendPrivilegeClubTierChangeJob implements ShouldQueue
             Log::error('Erreur email Privilege Club: '.$e->getMessage());
             throw $e;
         }
+
+        try {
+            $emailService->sendPrivilegeClubAdminAlert($this->user, $this->oldTier, $this->newTier);
+            Log::info('Alerte admins Privilege Club envoyée', ['user_id' => $this->user->id, 'new_tier' => $this->newTier]);
+        } catch (\Exception $e) {
+            // Ne pas échouer le job si l'alerte interne admin échoue.
+            Log::error('Erreur alerte admins Privilege Club: '.$e->getMessage());
+        }
     }
 }

@@ -439,6 +439,14 @@
                         <div class="mb-3">
                             <label class="form-label small fw-medium text-lux-dark-blue mb-2 d-block">Départ</label>
                             <input type="text" id="check-out-date" class="form-control w-100 px-3 py-2 border rounded" style="border-color: rgba(138, 150, 166, 0.3);" autocomplete="off" placeholder="YYYY-MM-DD" required>
+                            <p class="small text-lux-greyBlue mb-2 mt-2" id="min-stay-hint">
+                                <i class="fa-solid fa-circle-info me-1"></i>
+                                Séjour minimum de {{ $villa->minimum_stay_nights ?? 3 }} nuit{{ ($villa->minimum_stay_nights ?? 3) > 1 ? 's' : '' }}.
+                            </p>
+                            <div class="alert alert-warning small py-2 px-3 mb-0 d-none" id="min-stay-alert" role="alert">
+                                La durée minimale pour cette villa est de {{ $villa->minimum_stay_nights ?? 3 }} nuit{{ ($villa->minimum_stay_nights ?? 3) > 1 ? 's' : '' }}.
+                                Pour toute demande spécifique, contactez directement l'équipe LUXÎLES.
+                            </div>
                         </div>
                         <div class="mb-4">
                             <label class="form-label small fw-medium text-lux-dark-blue mb-2 d-block">Voyageurs</label>
@@ -537,56 +545,35 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${year}-${month}-${day}`;
     }
 
+    function parseDateFromYmd(dateStr) {
+        const parts = dateStr.split('-');
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    }
+
     // Empêcher les boucles de synchronisation (Flatpickr <-> FullCalendar)
     let isSyncingFromCalendar = false;
     let isSyncingFromPicker = false;
+    let validateDatesTimer = null;
+    let skipNextCheckInChange = false;
+    let skipNextCheckOutChange = false;
 
-    // Générer la liste des dates bloquées
-    @php
-        $blockedDates = [];
-        foreach($villa->availabilityBlocks as $block) {
-            $start = new \DateTime($block->start_date);
-            $end = new \DateTime($block->end_date);
-            $end->modify('+1 day');
-            $current = clone $start;
-            while ($current < $end) {
-                $blockedDates[] = $current->format('Y-m-d');
-                $current->modify('+1 day');
-            }
-        }
-        if(isset($reservations)) {
-            foreach($reservations as $reservation) {
-                $start = new \DateTime($reservation->check_in_date);
-                $end = new \DateTime($reservation->check_out_date);
-                $end->modify('+1 day');
-                $current = clone $start;
-                while ($current < $end) {
-                    $blockedDates[] = $current->format('Y-m-d');
-                    $current->modify('+1 day');
-                }
-            }
-        }
-        $blockedDates = array_unique($blockedDates);
-        $blockedDates = array_values($blockedDates); // Réindexer le tableau
-    @endphp
-    
-    // S'assurer que blockedDatesList est toujours un tableau
-    const blockedDatesList = @json($blockedDates) || [];
+    // Générer la liste des dates bloquées (VillaAvailabilityService — étape C)
+    const blockedDatesList = @json($blockedDates ?? []) || [];
+    // Accès O(1) pour les vérifications fréquentes pendant la sélection du calendrier
+    const blockedDatesSet = new Set(blockedDatesList);
     
     // Fonction pour vérifier si une date est bloquée
     function isDateBlocked(dateStr) {
         if (!Array.isArray(blockedDatesList) || blockedDatesList.length === 0) {
             return false;
         }
-        return blockedDatesList.includes(dateStr);
+        return blockedDatesSet.has(dateStr);
     }
     
     // Fonction pour vérifier si une période chevauche des dates bloquées
     function isPeriodBlocked(startStr, endStr) {
-        const startParts = startStr.split('-');
-        const endParts = endStr.split('-');
-        const start = new Date(parseInt(startParts[0]), parseInt(startParts[1]) - 1, parseInt(startParts[2]));
-        const end = new Date(parseInt(endParts[0]), parseInt(endParts[1]) - 1, parseInt(endParts[2]));
+        const start = parseDateFromYmd(startStr);
+        const end = parseDateFromYmd(endStr);
         const current = new Date(start);
 
         while (current < end) {
@@ -594,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const month = String(current.getMonth() + 1).padStart(2, '0');
             const day = String(current.getDate()).padStart(2, '0');
             const dateStr = `${year}-${month}-${day}`;
-            if (blockedDatesList.includes(dateStr)) {
+            if (blockedDatesSet.has(dateStr)) {
                 return true;
             }
             current.setDate(current.getDate() + 1);
@@ -620,6 +607,7 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             selectable: true,
             selectMirror: true,
+            unselectAuto: false,
             dayMaxEvents: true,
             events: [
                 @foreach($villa->availabilityBlocks as $block)
@@ -656,59 +644,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 @endif
             ],
             select: function(info) {
-                // Mettre à jour les champs de date quand une période est sélectionnée
+                if (!info.startStr || !info.endStr) {
+                    return;
+                }
+                if (isSyncingFromPicker) {
+                    return;
+                }
+
                 const checkInInput = document.getElementById('check-in-date');
                 const checkOutInput = document.getElementById('check-out-date');
-                
-                if (info.startStr && info.endStr) {
-                    // Debug: afficher les valeurs reçues
-                    console.log('FullCalendar select:', {
-                        startStr: info.startStr,
-                        endStr: info.endStr
-                    });
 
-                    // OPTION 1: Utiliser endStr directement (sans soustraction)
-                    // Si la sélection visuelle du 23 au 30 donne endStr = '2026-01-31',
-                    // alors la vraie date de fin devrait être endStr - 1 = '2026-01-30'
-                    const endParts = info.endStr.split('-');
-                    const endDate = new Date(parseInt(endParts[0]), parseInt(endParts[1]) - 1, parseInt(endParts[2]));
-                    endDate.setDate(endDate.getDate() - 1);
-                    const endDateStr = endDate.getFullYear() + '-' +
-                        String(endDate.getMonth() + 1).padStart(2, '0') + '-' +
-                        String(endDate.getDate()).padStart(2, '0');
+                const endDate = parseDateFromYmd(info.endStr);
+                endDate.setDate(endDate.getDate() - 1);
+                const endDateStr = formatDate(endDate);
 
-                    // OPTION 2: Si vous voulez que la date affichée corresponde exactement à la sélection visuelle,
-                    // commentez la ligne endDate.setDate(endDate.getDate() - 1); ci-dessus
-
-                    console.log('Selection:', info.startStr, 'to', endDateStr, '(FullCalendar endStr:', info.endStr, ')');
-
-                    console.log('Calculated end date:', endDateStr);
-
-                    // Si la sélection vient du picker (formulaire), éviter la boucle
-                    if (isSyncingFromPicker) {
-                        return;
-                    }
-
-                    // Mettre à jour le formulaire via Flatpickr sans retrigger (plus fluide)
-                    isSyncingFromCalendar = true;
-                    if (checkInPicker) {
-                        checkInPicker.setDate(info.startStr, false);
-                    } else {
-                        checkInInput.value = info.startStr;
-                    }
-                    if (checkOutPicker) {
-                        checkOutPicker.setDate(endDateStr, false);
-                    } else {
-                        checkOutInput.value = endDateStr;
-                    }
-                    isSyncingFromCalendar = false;
-
-                    // Une seule validation + recalcul prix
-                    validateAndUpdateDates(info.startStr, endDateStr, 'check-out');
+                // Même plage déjà en place : éviter de revalider en boucle
+                if (checkInInput.value === info.startStr && checkOutInput.value === endDateStr) {
+                    return;
                 }
+
+                isSyncingFromCalendar = true;
+                if (checkInPicker) {
+                    checkInPicker.setDate(info.startStr, false);
+                } else {
+                    checkInInput.value = info.startStr;
+                }
+                if (checkOutPicker) {
+                    checkOutPicker.setDate(endDateStr, false);
+                } else {
+                    checkOutInput.value = endDateStr;
+                }
+
+                clearTimeout(validateDatesTimer);
+                validateDatesTimer = setTimeout(function() {
+                    validateAndUpdateDates(info.startStr, endDateStr, 'check-out', true);
+                    isSyncingFromCalendar = false;
+                }, 120);
             },
             dateClick: function(info) {
-                console.log('FullCalendar dateClick:', info.dateStr);
 
                 // Empêcher le clic sur les dates bloquées/réservées
                 if (isDateBlocked(info.dateStr)) {
@@ -721,11 +694,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const checkIn = checkInInput.value;
                 const checkOut = checkOutInput.value;
 
-                console.log('Current field values:', { checkIn, checkOut });
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const dateParts = info.dateStr.split('-');
-                const clickedDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+                const clickedDate = parseDateFromYmd(info.dateStr);
                 
                 // Empêcher la sélection de dates passées
                 if (clickedDate < today) {
@@ -734,7 +705,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Si aucune date n'est sélectionnée OU les deux dates sont déjà sélectionnées
                 if (!checkIn || (checkIn && checkOut)) {
-                    console.log('Branch 1: Nouvelle sélection d\'arrivée');
                     isSyncingFromCalendar = true;
                     if (checkInPicker) {
                         checkInPicker.setDate(info.dateStr, false);
@@ -746,19 +716,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         checkOutInput.value = '';
                     }
-                    isSyncingFromCalendar = false;
 
-                    validateAndUpdateDates(info.dateStr, '', 'check-in');
+                    validateAndUpdateDates(info.dateStr, '', 'check-in', true);
+                    isSyncingFromCalendar = false;
                 }
                 // Si seule la date d'arrivée est sélectionnée
                 else if (checkIn && !checkOut) {
-                    console.log('Branch 2: Sélection de départ');
-                    const checkInParts = checkIn.split('-');
-                    const startDate = new Date(parseInt(checkInParts[0]), parseInt(checkInParts[1]) - 1, parseInt(checkInParts[2]));
+                    const startDate = parseDateFromYmd(checkIn);
 
                     // Si on clique sur une date avant l'arrivée, réinitialiser et recommencer
                     if (clickedDate < startDate) {
-                        console.log('Branch 2a: Date avant arrivée - réinitialisation');
                         isSyncingFromCalendar = true;
                         if (checkInPicker) {
                             checkInPicker.setDate(info.dateStr, false);
@@ -770,13 +737,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             checkOutInput.value = '';
                         }
-                        isSyncingFromCalendar = false;
 
-                        validateAndUpdateDates(info.dateStr, '', 'check-in');
+                        validateAndUpdateDates(info.dateStr, '', 'check-in', true);
+                        isSyncingFromCalendar = false;
                     } 
                     // Si on clique sur la même date, réinitialiser
                     else if (clickedDate.getTime() === startDate.getTime()) {
-                        console.log('Branch 2b: Même date - réinitialisation');
                         isSyncingFromCalendar = true;
                         if (checkInPicker) {
                             checkInPicker.clear();
@@ -788,13 +754,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             checkOutInput.value = '';
                         }
-                        isSyncingFromCalendar = false;
 
-                        validateAndUpdateDates('', '', 'check-in');
+                        validateAndUpdateDates('', '', 'check-in', true);
+                        isSyncingFromCalendar = false;
                     }
                     // Sinon, définir la date de départ
                     else {
-                        console.log('Branch 2c: Définition date de départ:', info.dateStr);
                         // Vérifier que la période n'est pas bloquée
                         if (isPeriodBlocked(checkIn, info.dateStr)) {
                             alert('Cette période n\'est pas disponible. La villa est réservée ou bloquée pour certaines dates de cette période.');
@@ -806,9 +771,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             checkOutInput.value = info.dateStr;
                         }
-                        isSyncingFromCalendar = false;
 
-                        validateAndUpdateDates(checkIn, info.dateStr, 'check-out');
+                        validateAndUpdateDates(checkIn, info.dateStr, 'check-out', true);
+                        isSyncingFromCalendar = false;
                     }
                 }
             },
@@ -816,22 +781,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Empêcher la sélection de dates bloquées/réservées
                 const selectStartStr = selectInfo.startStr;
                 const selectEndStr = selectInfo.endStr;
+
+                const checkoutDate = parseDateFromYmd(selectEndStr);
+                checkoutDate.setDate(checkoutDate.getDate() - 1);
+                const checkoutStr = formatDate(checkoutDate);
                 
                 // Vérifier si la période sélectionnée chevauche des dates bloquées
-                if (isPeriodBlocked(selectStartStr, selectEndStr)) {
-                    return false; // Bloquer la sélection
+                if (isPeriodBlocked(selectStartStr, checkoutStr)) {
+                    return false;
                 }
                 
                 // Vérifier que la date de début n'est pas dans le passé
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const selectStartParts = selectStartStr.split('-');
-                const selectStart = new Date(parseInt(selectStartParts[0]), parseInt(selectStartParts[1]) - 1, parseInt(selectStartParts[2]));
+                const selectStart = parseDateFromYmd(selectStartStr);
                 selectStart.setHours(0, 0, 0, 0);
                 if (selectStart < today) {
                     return false;
                 }
-                
+
+                if (isBelowMinStay(selectStartStr, checkoutStr)) {
+                    return false;
+                }
                 return true;
             },
         });
@@ -850,8 +821,9 @@ document.addEventListener('DOMContentLoaded', function() {
             onChange: function(selectedDates, dateStr) {
                 if (isSyncingFromCalendar) return;
                 isSyncingFromPicker = true;
+                skipNextCheckInChange = true;
                 const checkOut = document.getElementById('check-out-date').value;
-                validateAndUpdateDates(dateStr, checkOut, 'check-in');
+                validateAndUpdateDates(dateStr, checkOut, 'check-in', false);
                 isSyncingFromPicker = false;
             }
         });
@@ -868,8 +840,9 @@ document.addEventListener('DOMContentLoaded', function() {
             onChange: function(selectedDates, dateStr) {
                 if (isSyncingFromCalendar) return;
                 isSyncingFromPicker = true;
+                skipNextCheckOutChange = true;
                 const checkIn = document.getElementById('check-in-date').value;
-                validateAndUpdateDates(checkIn, dateStr, 'check-out');
+                validateAndUpdateDates(checkIn, dateStr, 'check-out', false);
                 isSyncingFromPicker = false;
             }
         });
@@ -910,6 +883,44 @@ document.addEventListener('DOMContentLoaded', function() {
             ->get()
     );
     const basePricePerNightGlobal = {{ $villa->base_price_per_night }};
+    const minStayNights = {{ (int) ($villa->minimum_stay_nights ?? 3) }};
+
+    function countNightsBetween(checkInStr, checkOutStr) {
+        if (!checkInStr || !checkOutStr) {
+            return 0;
+        }
+        const startDate = parseDateFromYmd(checkInStr);
+        const endDate = parseDateFromYmd(checkOutStr);
+
+        return Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+    }
+
+    function minStayCdcMessage() {
+        return 'La durée minimale pour cette villa est de ' + minStayNights + ' nuit'
+            + (minStayNights > 1 ? 's' : '')
+            + '. Pour toute demande spécifique, contactez directement l\'équipe LUXÎLES.';
+    }
+
+    function clearPriceDisplay() {
+        document.getElementById('nights-text').textContent = '-';
+        document.getElementById('base-price').textContent = '-';
+        document.getElementById('service-fee').textContent = '-';
+        document.getElementById('local-taxes').textContent = '-';
+        document.getElementById('total-price').textContent = '-';
+    }
+
+    function setMinStayFeedback(show) {
+        const alertEl = document.getElementById('min-stay-alert');
+        if (alertEl) {
+            alertEl.classList.toggle('d-none', !show);
+        }
+    }
+
+    function isBelowMinStay(checkInStr, checkOutStr) {
+        const nights = countNightsBetween(checkInStr, checkOutStr);
+
+        return nights > 0 && nights < minStayNights;
+    }
 
     function getPriceForDateJS(date) {
         const y = date.getFullYear();
@@ -941,23 +952,26 @@ document.addEventListener('DOMContentLoaded', function() {
         const checkOut = document.getElementById('check-out-date').value;
 
         if (!checkIn || !checkOut) {
-            document.getElementById('nights-text').textContent = '-';
-            document.getElementById('base-price').textContent = '-';
-            document.getElementById('service-fee').textContent = '-';
-            document.getElementById('local-taxes').textContent = '-';
-            document.getElementById('total-price').textContent = '-';
+            clearPriceDisplay();
             return;
         }
 
-        const checkInParts = checkIn.split('-');
-        const checkOutParts = checkOut.split('-');
-        const startDate = new Date(parseInt(checkInParts[0]), parseInt(checkInParts[1]) - 1, parseInt(checkInParts[2]));
-        const endDate = new Date(parseInt(checkOutParts[0]), parseInt(checkOutParts[1]) - 1, parseInt(checkOutParts[2]));
-        const nights = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+        const nights = countNightsBetween(checkIn, checkOut);
 
         if (nights <= 0) {
             return;
         }
+
+        if (nights < minStayNights) {
+            setMinStayFeedback(true);
+            clearPriceDisplay();
+            return;
+        }
+
+        setMinStayFeedback(false);
+
+        const startDate = parseDateFromYmd(checkIn);
+        const endDate = parseDateFromYmd(checkOut);
 
         // Calcul du prix de base en itérant sur chaque nuit (gestion des saisons)
         let totalBasePrice = 0;
@@ -1010,32 +1024,26 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('total-price').textContent = formatPrice(total);
     }
         
-        // Fonction réutilisable pour valider et mettre à jour les dates
-        function validateAndUpdateDates(checkInValue, checkOutValue, fieldType) {
-            console.log('validateAndUpdateDates called:', { checkInValue, checkOutValue, fieldType });
+        // Valider les dates et mettre à jour le prix (fromCalendar=true : ne pas rappeler calendar.select)
+        function validateAndUpdateDates(checkInValue, checkOutValue, fieldType, fromCalendar) {
 
             const checkInInput = document.getElementById('check-in-date');
             const checkOutInput = document.getElementById('check-out-date');
             
             // Si on valide check-in
             if (fieldType === 'check-in' && checkInValue) {
-                console.log('Validating check-in:', checkInValue);
                 if (isDateBlocked(checkInValue)) {
-                    console.log('Check-in date is blocked');
                     alert('Cette date n\'est pas disponible. La villa est réservée ou bloquée pour cette période.');
                     checkInInput.value = '';
-                    calendar.unselect();
+                    if (!fromCalendar && !isSyncingFromCalendar) {
+                        calendar.unselect();
+                    }
                     return false;
                 }
                 // Mettre à jour la date minimum pour le départ
-                const checkInParts = checkInValue.split('-');
-                const checkInDate = new Date(parseInt(checkInParts[0]), parseInt(checkInParts[1]) - 1, parseInt(checkInParts[2]));
+                const checkInDate = parseDateFromYmd(checkInValue);
                 checkInDate.setDate(checkInDate.getDate() + 1);
-                checkOutInput.min = checkInDate.getFullYear() + '-' +
-                    String(checkInDate.getMonth() + 1).padStart(2, '0') + '-' +
-                    String(checkInDate.getDate()).padStart(2, '0');
-                console.log('Updated check-out min to:', checkOutInput.min);
-
+                checkOutInput.min = formatDate(checkInDate);
                 // Mettre à jour le minDate de flatpickr checkout
                 if (typeof checkOutPicker !== 'undefined' && checkOutPicker) {
                     checkOutPicker.set('minDate', checkOutInput.min);
@@ -1044,53 +1052,95 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Si on valide check-out
             if (fieldType === 'check-out' && checkOutValue) {
-                console.log('Validating check-out:', checkOutValue, 'with check-in:', checkInValue);
                 if (isDateBlocked(checkOutValue)) {
-                    console.log('Check-out date is blocked');
                     alert('Cette date n\'est pas disponible. La villa est réservée ou bloquée pour cette période.');
                     checkOutInput.value = '';
-                    calendar.unselect();
+                    if (!fromCalendar && !isSyncingFromCalendar) {
+                        calendar.unselect();
+                    }
                     return false;
                 }
                 // Si pas d'arrivée mais un départ, réinitialiser
                 if (!checkInValue) {
-                    console.log('No check-in date set, resetting check-out');
                     checkOutInput.value = '';
                     return false;
                 }
-                console.log('Check-out validation passed');
             }
             
             // Si on a les deux dates, vérifier que la période n'est pas bloquée
             if (checkInValue && checkOutValue) {
-                console.log('Validating period:', checkInValue, 'to', checkOutValue);
-                if (isPeriodBlocked(checkInValue, checkOutValue)) {
-                    console.log('Period is blocked');
-                    alert('Cette période n\'est pas disponible. La villa est réservée ou bloquée pour certaines dates de cette période.');
-                    checkInInput.value = '';
+                const checkInDate = parseDateFromYmd(checkInValue);
+                const checkOutDate = parseDateFromYmd(checkOutValue);
+
+                if (checkOutDate <= checkInDate) {
+                    alert('La date de départ doit être postérieure à la date d\'arrivée.');
+                    setMinStayFeedback(false);
                     checkOutInput.value = '';
-                    calendar.unselect();
+                    if (checkOutPicker) {
+                        checkOutPicker.clear();
+                    }
+                    if (!fromCalendar && !isSyncingFromCalendar) {
+                        calendar.select(checkInValue, checkInValue);
+                    }
+                    clearPriceDisplay();
                     return false;
                 }
-                console.log('Period validation passed');
+
+                if (isPeriodBlocked(checkInValue, checkOutValue)) {
+                    alert('Cette période n\'est pas disponible. La villa est réservée ou bloquée pour certaines dates de cette période.');
+                    setMinStayFeedback(false);
+                    checkInInput.value = '';
+                    checkOutInput.value = '';
+                    if (checkInPicker) {
+                        checkInPicker.clear();
+                    }
+                    if (checkOutPicker) {
+                        checkOutPicker.clear();
+                    }
+                    if (!isSyncingFromCalendar) {
+                        calendar.unselect();
+                    }
+                    clearPriceDisplay();
+                    return false;
+                }
+
+                if (isBelowMinStay(checkInValue, checkOutValue)) {
+                    setMinStayFeedback(true);
+                    checkOutInput.value = '';
+                    if (checkOutPicker) {
+                        checkOutPicker.clear();
+                    }
+                    if (!fromCalendar && !isSyncingFromCalendar) {
+                        calendar.select(checkInValue, checkInValue);
+                    }
+                    clearPriceDisplay();
+                    return false;
+                }
+
+                setMinStayFeedback(false);
+            } else {
+                setMinStayFeedback(false);
             }
             
             // Mettre à jour la sélection du calendrier
             if (checkInValue && checkOutValue) {
                 // Pour les champs du formulaire, on ajuste endDate +1 pour compenser le recalcul de FullCalendar
-                const endParts = checkOutValue.split('-');
-                const adjustedEndDate = new Date(parseInt(endParts[0]), parseInt(endParts[1]) - 1, parseInt(endParts[2]));
+                const adjustedEndDate = parseDateFromYmd(checkOutValue);
                 adjustedEndDate.setDate(adjustedEndDate.getDate() + 1);
-                const adjustedEndStr = adjustedEndDate.getFullYear() + '-' +
-                    String(adjustedEndDate.getMonth() + 1).padStart(2, '0') + '-' +
-                    String(adjustedEndDate.getDate()).padStart(2, '0');
+                const adjustedEndStr = formatDate(adjustedEndDate);
 
-                calendar.select(checkInValue, adjustedEndStr);
+                if (!fromCalendar && !isSyncingFromCalendar) {
+                    calendar.select(checkInValue, adjustedEndStr);
+                }
                 calculatePrice();
             } else if (checkInValue) {
-                calendar.select(checkInValue, checkInValue);
+                if (!fromCalendar && !isSyncingFromCalendar) {
+                    calendar.select(checkInValue, checkInValue);
+                }
             } else {
-                calendar.unselect();
+                if (!fromCalendar && !isSyncingFromCalendar) {
+                    calendar.unselect();
+                }
             }
             
             return true;
@@ -1099,6 +1149,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Écouter les changements sur les champs de date pour mettre à jour le calendrier
         document.getElementById('check-in-date').addEventListener('change', function() {
             if (isSyncingFromCalendar || isSyncingFromPicker) return;
+            if (skipNextCheckInChange) {
+                skipNextCheckInChange = false;
+                return;
+            }
             const checkIn = this.value;
             const checkOut = document.getElementById('check-out-date').value;
             validateAndUpdateDates(checkIn, checkOut, 'check-in');
@@ -1106,6 +1160,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.getElementById('check-out-date').addEventListener('change', function() {
             if (isSyncingFromCalendar || isSyncingFromPicker) return;
+            if (skipNextCheckOutChange) {
+                skipNextCheckOutChange = false;
+                return;
+            }
             const checkIn = document.getElementById('check-in-date').value;
             const checkOut = this.value;
             validateAndUpdateDates(checkIn, checkOut, 'check-out');
@@ -1122,6 +1180,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Veuillez sélectionner vos dates d\'arrivée et de départ.');
                 return;
             }
+
+            const checkInDate = parseDateFromYmd(checkIn);
+            const checkOutDate = parseDateFromYmd(checkOut);
+            if (checkOutDate <= checkInDate) {
+                alert('La date de départ doit être postérieure à la date d\'arrivée.');
+                return;
+            }
             
             // Vérifier que la période n'est pas bloquée
             if (isPeriodBlocked(checkIn, checkOut)) {
@@ -1129,16 +1194,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Vérifier le séjour minimum
-            const checkInParts = checkIn.split('-');
-            const checkOutParts = checkOut.split('-');
-            const startDate = new Date(parseInt(checkInParts[0]), parseInt(checkInParts[1]) - 1, parseInt(checkInParts[2]));
-            const endDate = new Date(parseInt(checkOutParts[0]), parseInt(checkOutParts[1]) - 1, parseInt(checkOutParts[2]));
-            const nights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-            const minStay = {{ $villa->minimum_stay_nights ?? 3 }};
-            
-            if (nights < minStay) {
-                alert('Le séjour minimum est de ' + minStay + ' nuit' + (minStay > 1 ? 's' : '') + '.');
+            if (isBelowMinStay(checkIn, checkOut)) {
+                setMinStayFeedback(true);
+                clearPriceDisplay();
+                alert(minStayCdcMessage());
                 return;
             }
             

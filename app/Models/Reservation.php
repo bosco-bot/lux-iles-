@@ -135,6 +135,27 @@ class Reservation extends Model
     {
         return $this->hasOne(VillaReview::class);
     }
+
+    /**
+     * Réservation saisie hors ligne par l'admin (§3.11 CDC) — pas de paiement Stripe côté client.
+     */
+    public function isManualOffline(): bool
+    {
+        return $this->source === 'manual';
+    }
+
+    public function allowsClientOnlinePayment(): bool
+    {
+        return ! $this->isManualOffline();
+    }
+
+    public function hasPendingClientPayments(): bool
+    {
+        return $this->payments()
+            ->whereIn('status', ['pending', 'processing'])
+            ->whereIn('type', ['deposit', 'balance', 'deposit_guarantee'])
+            ->exists();
+    }
 }
 
 

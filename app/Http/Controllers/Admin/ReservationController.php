@@ -9,7 +9,9 @@ use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Models\Villa;
-use App\Models\VillaAvailabilityBlock;
+use App\Services\EmailService;
+use App\Services\VillaAvailabilityContext;
+use App\Services\VillaAvailabilityService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +21,11 @@ use Illuminate\Validation\ValidationException;
 
 class ReservationController extends Controller
 {
+  public function __construct(
+    protected EmailService $emailService,
+    protected VillaAvailabilityService $availabilityService,
+  ) {}
+
   /**
    * Afficher la liste des réservations
    */
@@ -134,6 +141,7 @@ class ReservationController extends Controller
         'check_in' => ['required', 'date'],
         'check_out' => ['required', 'date', 'after:check_in'],
         'guests' => ['required', 'integer', 'min:1'],
+        'exclude_reservation_id' => ['nullable', 'integer', 'exists:reservations,id'],
       ]);
     } catch (ValidationException $e) {
       return response()->json([
@@ -155,6 +163,23 @@ class ReservationController extends Controller
       return response()->json([
         'success' => false,
         'message' => $error,
+      ], 422);
+    }
+
+    $excludeReservationId = isset($validated['exclude_reservation_id'])
+      ? (int) $validated['exclude_reservation_id']
+      : null;
+
+    if ($this->availabilityService->hasConflict(
+      $villa->id,
+      $checkIn,
+      $checkOut,
+      $excludeReservationId,
+      VillaAvailabilityContext::admin()
+    )) {
+      return response()->json([
+        'success' => false,
+        'message' => 'Ces dates ne sont pas disponibles pour cette villa (réservation ou blocage existant).',
       ], 422);
     }
 
@@ -207,7 +232,13 @@ class ReservationController extends Controller
       return redirect()->back()->withInput()->with('error', $message);
     }
 
-    if ($this->hasDateConflict($villa->id, $checkInDate, $checkOutDate)) {
+    if ($this->availabilityService->hasConflict(
+      $villa->id,
+      $checkInDate,
+      $checkOutDate,
+      null,
+      VillaAvailabilityContext::admin()
+    )) {
       return redirect()->back()->withInput()->with(
         'error',
         'Ces dates ne sont pas disponibles pour cette villa (réservation ou blocage existant).'
@@ -385,7 +416,7 @@ class ReservationController extends Controller
    */
   public function update(Request $request, $id)
   {
-    $reservation = Reservation::findOrFail($id);
+    $reservation = Reservation::with('villa')->findOrFail($id);
 
     $validated = $request->validate([
       'status' => 'required|in:pending,confirmed,deposit_paid,fully_paid,cancelled,completed',
@@ -400,7 +431,34 @@ class ReservationController extends Controller
       'admin_notes' => 'nullable|string',
     ]);
 
-    $reservation->update($validated);
+    $checkInDate = Carbon::parse($validated['check_in_date']);
+    $checkOutDate = Carbon::parse($validated['check_out_date']);
+    $nights = $checkInDate->diffInDays($checkOutDate);
+    $guests = (int) $validated['number_of_guests'];
+
+    if ($reservation->villa && ($message = $this->validateVillaBookingRules($reservation->villa, $nights, $guests))) {
+      return redirect()->back()->withInput()->with('error', $message);
+    }
+
+    if ($this->availabilityService->hasConflict(
+      $reservation->villa_id,
+      $checkInDate,
+      $checkOutDate,
+      $reservation->id,
+      VillaAvailabilityContext::admin()
+    )) {
+      return redirect()->back()->withInput()->with(
+        'error',
+        'Ces dates ne sont pas disponibles pour cette villa (réservation ou blocage existant).'
+      );
+    }
+
+    $validated['number_of_nights'] = $nights;
+
+    DB::transaction(function () use ($reservation, $validated) {
+      $reservation->update($validated);
+      $this->syncManualReservationPaymentsFromStatus($reservation, $validated['status']);
+    });
 
     return redirect()->route('admin.reservations.show', $reservation->id)
       ->with('success', 'Réservation mise à jour avec succès');
@@ -417,12 +475,23 @@ class ReservationController extends Controller
       'cancellation_reason' => 'nullable|string|max:500',
     ]);
 
-    $reservation->update([
-      'status' => 'cancelled',
-      'cancellation_reason' => $request->cancellation_reason,
-      'cancelled_at' => now(),
-      'cancelled_by' => auth()->id(),
-    ]);
+    DB::transaction(function () use ($reservation, $request) {
+      $reservation->update([
+        'status' => 'cancelled',
+        'cancellation_reason' => $request->cancellation_reason,
+        'cancelled_at' => now(),
+        'cancelled_by' => auth()->id(),
+      ]);
+
+      $this->syncManualReservationPaymentsFromStatus($reservation->fresh(), 'cancelled');
+    });
+
+    try {
+      $reservation->loadMissing(['user', 'villa']);
+      $this->emailService->sendCancellationEmail($reservation);
+    } catch (\Exception $e) {
+      \Log::error('Erreur envoi email annulation réservation: ' . $e->getMessage());
+    }
 
     return redirect()->route('admin.reservations')
       ->with('success', 'Réservation annulée avec succès');
@@ -482,26 +551,6 @@ class ReservationController extends Controller
     return null;
   }
 
-  private function hasDateConflict(int $villaId, Carbon $checkIn, Carbon $checkOut): bool
-  {
-    $activeStatuses = ['pending', 'confirmed', 'deposit_paid', 'fully_paid', 'completed'];
-
-    $reservationConflict = Reservation::where('villa_id', $villaId)
-      ->whereIn('status', $activeStatuses)
-      ->where('check_in_date', '<', $checkOut->toDateString())
-      ->where('check_out_date', '>', $checkIn->toDateString())
-      ->exists();
-
-    if ($reservationConflict) {
-      return true;
-    }
-
-    return VillaAvailabilityBlock::where('villa_id', $villaId)
-      ->where('start_date', '<', $checkOut->toDateString())
-      ->where('end_date', '>', $checkIn->toDateString())
-      ->exists();
-  }
-
   private function generateReservationNumber(): string
   {
     do {
@@ -556,5 +605,74 @@ class ReservationController extends Controller
     }
 
     return $calculatedDate;
+  }
+
+  /**
+   * Maintient la cohérence comptable des paiements manuels lors d'un changement de statut admin.
+   */
+  private function syncManualReservationPaymentsFromStatus(Reservation $reservation, string $status): void
+  {
+    if ($reservation->source !== 'manual') {
+      return;
+    }
+
+    $payments = $reservation->payments()
+      ->whereIn('type', ['deposit', 'balance', 'deposit_guarantee'])
+      ->get()
+      ->keyBy('type');
+
+    if ($payments->isEmpty()) {
+      return;
+    }
+
+    $syncPayment = function (string $type, string $targetStatus, ?Carbon $paidAt = null) use ($payments): void {
+      /** @var Payment|null $payment */
+      $payment = $payments->get($type);
+      if (! $payment) {
+        return;
+      }
+
+      $payload = ['status' => $targetStatus];
+      $payload['paid_at'] = $targetStatus === 'completed' ? ($payment->paid_at ?? $paidAt ?? now()) : null;
+      $payment->update($payload);
+    };
+
+    if ($status === 'cancelled') {
+      foreach (['deposit', 'balance', 'deposit_guarantee'] as $type) {
+        /** @var Payment|null $payment */
+        $payment = $payments->get($type);
+        if (! $payment || $payment->status === 'completed') {
+          continue;
+        }
+
+        $payment->update([
+          'status' => 'cancelled',
+          'paid_at' => null,
+        ]);
+      }
+
+      return;
+    }
+
+    if (in_array($status, ['fully_paid', 'completed'], true)) {
+      $syncPayment('deposit', 'completed');
+      $syncPayment('balance', 'completed');
+      $syncPayment('deposit_guarantee', 'completed');
+
+      return;
+    }
+
+    if ($status === 'deposit_paid') {
+      $syncPayment('deposit', 'completed');
+      $syncPayment('balance', 'pending');
+      $syncPayment('deposit_guarantee', 'pending');
+
+      return;
+    }
+
+    // pending / confirmed: aucun encaissement validé côté paiements.
+    $syncPayment('deposit', 'pending');
+    $syncPayment('balance', 'pending');
+    $syncPayment('deposit_guarantee', 'pending');
   }
 }

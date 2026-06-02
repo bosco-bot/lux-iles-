@@ -524,21 +524,21 @@
                     <div class="d-flex align-items-start gap-3">
                         <i class="fa-solid fa-house-chimney text-lux-gold mt-1"></i>
                         <div>
-                            <p class="small fw-medium text-white mb-0">{{ $activeReservation->villa->name }}</p>
-                            <p class="small text-white mb-0">{{ $activeReservation->villa->island->name ?? '' }}</p>
+                            <p class="small fw-medium text-lux-blue mb-0">{{ $activeReservation->villa->name }}</p>
+                            <p class="small text-lux-gray mb-0">{{ $activeReservation->villa->island->name ?? '' }}</p>
                         </div>
                     </div>
                     <div class="d-flex align-items-start gap-3">
                         <i class="fa-regular fa-calendar text-lux-gold mt-1"></i>
                         <div>
-                            <p class="small fw-medium text-white mb-0">{{ $activeReservation->check_in_date->format('d') }} - {{ $activeReservation->check_out_date->format('d M Y') }}</p>
-                            <p class="small text-white mb-0">{{ $activeReservation->number_of_nights }} nuits</p>
+                            <p class="small fw-medium text-lux-blue mb-0">{{ $activeReservation->check_in_date->format('d') }} - {{ $activeReservation->check_out_date->format('d M Y') }}</p>
+                            <p class="small text-lux-gray mb-0">{{ $activeReservation->number_of_nights }} nuits</p>
                         </div>
                     </div>
                     <div class="d-flex align-items-start gap-3">
                         <i class="fa-solid fa-users text-lux-gold mt-1"></i>
                         <div>
-                            <p class="small fw-medium text-white mb-0">{{ $activeReservation->number_of_guests }} personne{{ $activeReservation->number_of_guests > 1 ? 's' : '' }}</p>
+                            <p class="small fw-medium text-lux-blue mb-0">{{ $activeReservation->number_of_guests }} personne{{ $activeReservation->number_of_guests > 1 ? 's' : '' }}</p>
                         </div>
                     </div>
                 </div>

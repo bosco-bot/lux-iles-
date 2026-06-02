@@ -11,6 +11,8 @@ use App\Services\PaymentService;
 use App\Services\PromoCodeService;
 use App\Models\PromoCode;
 use App\Jobs\SendReservationConfirmationJob;
+use App\Services\VillaAvailabilityContext;
+use App\Services\VillaAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +21,10 @@ use Carbon\Carbon;
 
 class BookingController extends Controller
 {
+    public function __construct(
+        protected VillaAvailabilityService $availabilityService,
+    ) {}
+
     /**
      * Afficher la page de réservation
      */
@@ -36,12 +42,10 @@ class BookingController extends Controller
         $villa = Villa::with(['island', 'photos', 'equipments', 'availabilityBlocks', 'seasonalPrices.season'])
             ->where('is_active', true)
             ->findOrFail($villaId);
-        
-        // Récupérer les réservations confirmées ou payées
-        $reservations = \App\Models\Reservation::where('villa_id', $villa->id)
-            ->whereIn('status', ['confirmed', 'deposit_paid', 'fully_paid', 'completed'])
-            ->where('check_out_date', '>=', now()->toDateString())
-            ->get();
+
+        $publicAvailability = VillaAvailabilityContext::publicSite();
+        $blockedDates = $this->availabilityService->getBlockedDates($villa->id, null, $publicAvailability);
+        $reservations = $this->availabilityService->getReservationsForCalendar($villa->id, $publicAvailability);
         
         // Récupérer la photo principale
         $primaryPhoto = $villa->photos->where('is_primary', true)->first() 
@@ -62,6 +66,7 @@ class BookingController extends Controller
             'checkOut', 
             'guests', 
             'reservations',
+            'blockedDates',
             'globalTaxRate',
             'touristTaxPerNight',
             'touristTaxEnabled',
@@ -246,6 +251,19 @@ class BookingController extends Controller
 
         if ($bookingRulesError = $this->validateVillaBookingRules($villa, $nights, (int) $validated['guests'])) {
             return $bookingRulesError;
+        }
+
+        if ($this->availabilityService->hasConflict(
+            $villa->id,
+            $checkInDate,
+            $checkOutDate,
+            null,
+            VillaAvailabilityContext::publicSite()
+        )) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ces dates ne sont pas disponibles pour cette villa (réservation ou blocage existant).',
+            ], 422);
         }
         
         try {
@@ -715,6 +733,19 @@ class BookingController extends Controller
 
         if ($bookingRulesError = $this->validateVillaBookingRules($villa, $nights, $guests)) {
             return $bookingRulesError;
+        }
+
+        if ($this->availabilityService->hasConflict(
+            $villa->id,
+            $checkIn,
+            $checkOut,
+            null,
+            VillaAvailabilityContext::publicSite()
+        )) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ces dates ne sont pas disponibles pour cette villa (réservation ou blocage existant).',
+            ], 422);
         }
 
         // Calculer le prix en tenant compte des tarifs saisonniers

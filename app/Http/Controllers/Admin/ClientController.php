@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SendAccountInvitationEmailJob;
+use App\Models\PromoCode;
 use App\Models\PrivilegeClubNotification;
 use App\Models\User;
+use App\Services\EmailService;
 use App\Services\PrivilegeClubService;
+use App\Services\WhatsAppClickToChatService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +19,10 @@ use Illuminate\Validation\Rule;
 
 class ClientController extends Controller
 {
+    public function __construct(
+        protected WhatsAppClickToChatService $whatsAppService,
+        protected EmailService $emailService
+    ) {}
     /**
      * Afficher la liste des clients
      */
@@ -185,6 +192,11 @@ class ClientController extends Controller
             ->limit(5)
             ->get();
 
+        $activePromoCodes = PromoCode::query()
+            ->where('is_active', true)
+            ->orderByDesc('created_at')
+            ->get();
+
         return view('pages.admin.client-show', compact(
             'client',
             'stats',
@@ -194,7 +206,81 @@ class ClientController extends Controller
             'tierDefinitions',
             'pendingWhatsappNotifications',
             'recentWhatsappSentNotifications',
+            'activePromoCodes',
         ));
+    }
+
+    /**
+     * Envoyer un code promo au client par email (§3.2 CDC — attribution ciblée).
+     */
+    public function sendPromoCode(User $client, Request $request)
+    {
+        if ($client->is_admin) {
+            return back()->with('error', 'Action non applicable aux administrateurs.');
+        }
+
+        $validated = $request->validate([
+            'promo_code_id' => ['required', 'exists:promo_codes,id'],
+        ]);
+
+        $promoCode = PromoCode::findOrFail($validated['promo_code_id']);
+
+        if (! $promoCode->is_active) {
+            return back()->with('error', 'Ce code promo est désactivé.');
+        }
+
+        try {
+            $this->emailService->sendPromoCodeEmail($client, $promoCode);
+
+            return back()->with('success', "Code promo {$promoCode->code} envoyé à {$client->email}.");
+        } catch (\Exception $e) {
+            \Log::error('Erreur envoi code promo client: ' . $e->getMessage());
+
+            return back()->with('error', 'Impossible d\'envoyer le code promo par email.');
+        }
+    }
+
+    /**
+     * Ouvre WhatsApp avec un code promo prérempli pour le client (§3.2 CDC).
+     */
+    public function openPromoCodeWhatsapp(User $client, Request $request)
+    {
+        if ($client->is_admin) {
+            return back()->with('error', 'Action non applicable aux administrateurs.');
+        }
+
+        $validated = $request->validate([
+            'promo_code_id' => ['required', 'exists:promo_codes,id'],
+        ]);
+
+        if (! $client->phone) {
+            return back()->with('error', 'Aucun numéro de téléphone renseigné pour ce client.');
+        }
+
+        $promoCode = PromoCode::findOrFail($validated['promo_code_id']);
+
+        if (! $promoCode->is_active) {
+            return back()->with('error', 'Ce code promo est désactivé.');
+        }
+
+        $valueLabel = $promoCode->type === 'percent'
+            ? rtrim(rtrim(number_format((float) $promoCode->value, 2, ',', ''), '0'), ',') . ' %'
+            : number_format((float) $promoCode->value, 2, ',', ' ') . ' €';
+
+        $validUntil = $promoCode->valid_until?->format('d/m/Y');
+        $message = $this->whatsAppService->buildPromoCodeMessage(
+            $client->first_name ?? 'Client',
+            $promoCode->code,
+            $valueLabel,
+            $validUntil
+        );
+
+        $link = $this->whatsAppService->buildLink($client->phone, $message);
+        if (! $link) {
+            return back()->with('error', 'Numéro de téléphone invalide pour WhatsApp.');
+        }
+
+        return redirect()->away($link);
     }
 
     /**
@@ -217,6 +303,40 @@ class ClientController extends Controller
         $notification->markWhatsappSent();
 
         return back()->with('success', 'Message WhatsApp marqué comme envoyé.');
+    }
+
+    /**
+     * Ouvre WhatsApp avec un message prérempli pour une notification Privilege Club.
+     */
+    public function openPrivilegeClubWhatsapp(User $client, PrivilegeClubNotification $notification, PrivilegeClubService $clubService)
+    {
+        if ($client->is_admin) {
+            return back()->with('error', 'Action non applicable aux administrateurs.');
+        }
+
+        if ($notification->user_id !== $client->id) {
+            abort(404);
+        }
+
+        if (! $notification->requiresWhatsappFollowUp()) {
+            return back()->with('error', 'Cette notification ne requiert pas de suivi WhatsApp.');
+        }
+
+        if (! $client->phone) {
+            return back()->with('error', 'Aucun numéro de téléphone renseigné pour ce client.');
+        }
+
+        $message = $this->whatsAppService->buildPrivilegeClubMessage(
+            $client->first_name ?? 'Client',
+            $clubService->tierLabel($notification->new_tier)
+        );
+
+        $link = $this->whatsAppService->buildLink($client->phone, $message);
+        if (! $link) {
+            return back()->with('error', 'Numéro de téléphone invalide pour WhatsApp.');
+        }
+
+        return redirect()->away($link);
     }
 
     /**

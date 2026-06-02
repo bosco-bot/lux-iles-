@@ -7,6 +7,8 @@ use App\Models\Villa;
 use App\Models\VillaPhoto;
 use App\Models\VillaAvailabilityBlock;
 use App\Models\VillaSeasonalPrice;
+use App\Services\VillaAvailabilityContext;
+use App\Services\VillaAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -613,6 +615,28 @@ class VillaController extends Controller
                 'message' => 'Erreur : ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Dates indisponibles pour une villa (formulaire réservation manuelle, calendrier admin).
+     */
+    public function blockedDates(Request $request, int $id, VillaAvailabilityService $availability)
+    {
+        $villa = Villa::where('is_active', true)->findOrFail($id);
+
+        $excludeReservationId = $request->filled('exclude_reservation_id')
+            ? (int) $request->query('exclude_reservation_id')
+            : null;
+
+        return response()->json([
+            'blocked_dates' => $availability->getBlockedDates(
+                $villa->id,
+                $excludeReservationId,
+                VillaAvailabilityContext::admin()
+            ),
+            'min_stay' => (int) ($villa->minimum_stay_nights ?? 3),
+            'max_capacity' => (int) $villa->max_capacity,
+        ]);
     }
 }
 

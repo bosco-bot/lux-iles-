@@ -92,7 +92,7 @@ class PaymentReceivedNotification extends Notification
             'reservation_number' => $reservation->reservation_number ?? null,
             'amount' => $this->payment->amount,
             'type_label' => $this->payment->type_label,
-            'url' => route('admin.payments.show', $this->payment->id),
+            'url' => route('admin.payments.show', ['id' => $this->payment->id], false),
             'icon' => 'fa-money-bill-wave',
             'color' => 'success',
         ];
