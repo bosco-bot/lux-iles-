@@ -46,6 +46,7 @@ class PromoCodeTest extends TestCase
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('villa_availability_blocks');
         Schema::dropIfExists('promo_code_usages');
         Schema::dropIfExists('promo_codes');
         Schema::dropIfExists('payments');
@@ -194,6 +195,15 @@ class PromoCodeTest extends TestCase
             $table->foreignId('season_id')->constrained('seasons')->cascadeOnDelete();
             $table->decimal('price_per_night', 10, 2);
             $table->string('currency', 3)->default('EUR');
+            $table->timestamps();
+        });
+
+        Schema::create('villa_availability_blocks', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('villa_id')->constrained('villas')->cascadeOnDelete();
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->string('reason')->nullable();
             $table->timestamps();
         });
 

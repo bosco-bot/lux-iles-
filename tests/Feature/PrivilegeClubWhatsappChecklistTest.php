@@ -107,6 +107,19 @@ class PrivilegeClubWhatsappChecklistTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::create('promo_codes', function (Blueprint $table) {
+            $table->id();
+            $table->string('code')->unique();
+            $table->enum('type', ['percent', 'fixed']);
+            $table->decimal('value', 8, 2);
+            $table->date('valid_from')->nullable();
+            $table->date('valid_until')->nullable();
+            $table->unsignedInteger('max_uses')->nullable();
+            $table->unsignedInteger('uses_count')->default(0);
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
         Schema::create('privilege_club_notifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users');
@@ -140,6 +153,7 @@ class PrivilegeClubWhatsappChecklistTest extends TestCase
     protected function tearDown(): void
     {
         Schema::dropIfExists('privilege_club_notifications');
+        Schema::dropIfExists('promo_codes');
         Schema::dropIfExists('villa_reviews');
         Schema::dropIfExists('messages');
         Schema::dropIfExists('client_documents');
@@ -166,7 +180,7 @@ class PrivilegeClubWhatsappChecklistTest extends TestCase
             ->get(route('admin.clients.show', $this->client))
             ->assertOk()
             ->assertSee('WhatsApp en attente')
-            ->assertSee('Marquer WhatsApp envoyé')
+            ->assertSee('Marquer envoyé')
             ->assertSee('+33601020304');
     }
 
