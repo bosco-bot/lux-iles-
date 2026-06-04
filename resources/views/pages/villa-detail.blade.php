@@ -383,23 +383,41 @@
                 </div>
 
                 @forelse($publishedReviews as $review)
+                    @php
+                        $reviewUser = $review->user;
+                        $reviewInitial = strtoupper(substr($reviewUser?->first_name ?? '?', 0, 1));
+                        $reviewFullName = trim(($reviewUser?->first_name ?? '') . ' ' . ($reviewUser?->last_name ?? '')) ?: 'Voyageur';
+                    @endphp
                     <div class="bg-white p-4 rounded border mb-3" style="border-color: rgba(138, 150, 166, 0.1);">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <span class="fw-medium text-lux-dark-blue">{{ $review->user->first_name }}</span>
-                                @if($review->published_at)
-                                    <span class="text-lux-greyBlue small ms-2">{{ $review->published_at->format('F Y') }}</span>
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <div class="rounded-circle overflow-hidden flex-shrink-0" style="width: 48px; height: 48px;">
+                                @if($reviewUser?->photo_url)
+                                    <img src="{{ asset('storage/' . $reviewUser->photo_url) }}" class="w-100 h-100" style="object-fit: cover;" alt="{{ $reviewFullName }}">
+                                @else
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center fw-medium" style="background-color: rgba(203, 174, 130, 0.25); color: var(--lux-dark-blue); font-size: 1.125rem;">
+                                        {{ $reviewInitial }}
+                                    </div>
                                 @endif
                             </div>
-                            <div>
-                                @for($i = 1; $i <= 5; $i++)
-                                    <i class="fa-solid fa-star small {{ $i <= $review->rating ? 'text-warning' : 'text-muted opacity-25' }}"></i>
-                                @endfor
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                    <div>
+                                        <span class="fw-medium text-lux-dark-blue">{{ $reviewFullName }}</span>
+                                        @if($review->published_at)
+                                            <span class="text-lux-greyBlue small ms-2">{{ $review->published_at->format('F Y') }}</span>
+                                        @endif
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        @for($i = 1; $i <= 5; $i++)
+                                            <i class="fa-solid fa-star small {{ $i <= $review->rating ? 'text-warning' : 'text-muted opacity-25' }}"></i>
+                                        @endfor
+                                    </div>
+                                </div>
+                                <p class="text-lux-greyBlue mb-0" style="white-space: pre-line;">{{ $review->comment }}</p>
                             </div>
                         </div>
-                        <p class="text-lux-greyBlue mb-0" style="white-space: pre-line;">{{ $review->comment }}</p>
                         @if($review->admin_response)
-                            <div class="mt-3 pt-3 border-top" style="border-color: rgba(138, 150, 166, 0.15) !important;">
+                            <div class="mt-3 pt-3 border-top ms-5 ps-3" style="border-color: rgba(138, 150, 166, 0.15) !important;">
                                 <p class="small fw-medium text-lux-dark-blue mb-1"><i class="fa-solid fa-reply me-1 text-lux-gold"></i> Réponse LUXÎLES</p>
                                 <p class="small text-lux-greyBlue mb-0" style="white-space: pre-line;">{{ $review->admin_response }}</p>
                             </div>

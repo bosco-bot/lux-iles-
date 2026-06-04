@@ -103,7 +103,7 @@ class VillaReviewTest extends TestCase
     }
 
     #[Test]
-    public function published_review_appears_on_villa_page_with_first_name_only(): void
+    public function published_review_appears_on_villa_page_with_full_name(): void
     {
         VillaReview::create([
             'villa_id' => $this->villa->id,
@@ -118,9 +118,8 @@ class VillaReviewTest extends TestCase
         $response = $this->get(route('villas.show', $this->villa->id));
 
         $response->assertOk()
-            ->assertSee('Marie')
-            ->assertSee('Très belle villa')
-            ->assertDontSee('Dupont');
+            ->assertSee('Marie Dupont')
+            ->assertSee('Très belle villa');
     }
 
     #[Test]

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Villa;
 use App\Models\Island;
-use Illuminate\Http\Request;
+use App\Models\Villa;
+use App\Models\VillaReview;
 
 class HomeController extends Controller
 {
@@ -34,8 +34,20 @@ class HomeController extends Controller
         
         // Récupérer toutes les îles pour le formulaire de recherche
         $islands = Island::orderBy('name', 'asc')->get();
-        
-        return view('pages.home', compact('featuredVillas', 'destinations', 'islands'));
+
+        // §3.4 CDC — témoignages accueil : 3 derniers avis publiés (modérés)
+        $featuredReviews = VillaReview::query()
+            ->approved()
+            ->with([
+                'user:id,first_name,last_name,city,country,photo_url',
+                'villa:id,name,island_id',
+                'villa.island:id,name',
+            ])
+            ->orderByDesc('published_at')
+            ->limit(3)
+            ->get();
+
+        return view('pages.home', compact('featuredVillas', 'destinations', 'islands', 'featuredReviews'));
     }
 }
 

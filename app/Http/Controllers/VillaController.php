@@ -159,7 +159,7 @@ class VillaController extends Controller
             ->findOrFail($id);
 
         $publishedReviews = $villa->publishedReviews()
-            ->with('user:id,first_name')
+            ->with('user:id,first_name,last_name,photo_url')
             ->get();
 
         $averageRating = $villa->averageRating();
